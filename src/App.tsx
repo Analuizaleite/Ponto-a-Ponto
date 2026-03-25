@@ -15,7 +15,7 @@ import {
 // Algoritmos de busca e caminho
 import { generateBFSSteps } from "./algorithms/bfs";
 import { generateDFSSteps } from "./algorithms/dfs";
-import { generateDijkstraSteps } from "./algorithms/dijkstra";
+import { generateDijkstraSteps, getShortestPath } from "./algorithms/dijkstra";
 // Algoritmos de árvore AVL
 import {
   performRightRotation,
@@ -30,105 +30,188 @@ interface Node {
   x: number;
   y: number;
 }
-// Interface para representar uma aresta no grafo
 interface Edge {
   sourceId: number;
   targetId: number;
   weight: number;
 }
 
-// --- BANCO DE FASES (LEVELS) ---
-// Array contendo todas as fases do jogo
-const LEVELS = [
+// --- CONFIGURAÇÃO DAS FASES ---
+const LEVEL_CONFIGS = [
   {
-    level: 1,
+    algo: "BFS",
     title: "Iniciação ao BFS (Largura)",
     description:
-      "O BFS visita os vizinhos por camadas (os mais próximos primeiro). Comece pelo nó 0 e clique na ordem exata!",
-    algo: "BFS",
-    expectedVisits: [0, 1, 2, 3],
-    nodes: [
-      { id: 0, x: 250, y: 150 },
-      { id: 1, x: 150, y: 300 },
-      { id: 2, x: 350, y: 300 },
-      { id: 3, x: 250, y: 450 },
-    ],
-    edges: [
-      { sourceId: 0, targetId: 1, weight: 1 },
-      { sourceId: 0, targetId: 2, weight: 1 },
-      { sourceId: 1, targetId: 3, weight: 1 },
-    ],
+      "O BFS visita os vizinhos por camadas. Comece pelo nó de origem (0) e clique na ordem exata (menores IDs primeiro)!",
   },
   {
-    level: 2,
+    algo: "DFS",
     title: "Mergulho Profundo (DFS)",
     description:
-      "O DFS vai o mais fundo possível em um caminho antes de voltar (backtracking). Mergulhe pelo nó 0 priorizando os menores números!",
-    algo: "DFS",
-    expectedVisits: [0, 1, 2, 3, 4, 5],
-    nodes: [
-      { id: 0, x: 250, y: 100 },
-      { id: 1, x: 150, y: 200 },
-      { id: 2, x: 150, y: 300 },
-      { id: 3, x: 150, y: 400 },
-      { id: 4, x: 350, y: 200 },
-      { id: 5, x: 350, y: 300 },
-    ],
-    edges: [
-      { sourceId: 0, targetId: 1, weight: 1 },
-      { sourceId: 1, targetId: 2, weight: 1 },
-      { sourceId: 2, targetId: 3, weight: 1 },
-      { sourceId: 0, targetId: 4, weight: 1 },
-      { sourceId: 4, targetId: 5, weight: 1 },
-    ],
+      "O DFS vai o mais fundo possível antes de voltar. Mergulhe pelo nó de origem (0) priorizando sempre os menores IDs!",
   },
   {
-    level: 3,
+    algo: "AVL",
     title: "Equilíbrio de Fluxo (Rotações)",
     description:
-      "Este grafo está desequilibrado à esquerda. Execute uma Rotação Simples à Direita para equilibrar a rede!",
-    algo: "AVL",
-    expectedVisits: [2, 1, 0],
-    nodes: [
-      { id: 2, x: 350, y: 150 },
-      { id: 1, x: 250, y: 250 },
-      { id: 0, x: 150, y: 350 },
-    ],
-    edges: [
-      { sourceId: 2, targetId: 1, weight: 1 },
-      { sourceId: 1, targetId: 0, weight: 1 },
-    ],
+      "Analise a estrutura gerada aleatoriamente e escolha a rotação exata para balancear a árvore!",
   },
   {
-    level: 4,
+    algo: "DIJKSTRA",
     title: "Caminho Mínimo (Dijkstra)",
     description:
-      "Use o algoritmo de Dijkstra para encontrar o caminho mais curto do nó 0 ao nó 4. Escolha sempre o vizinho com menor distância acumulada!",
-    algo: "DIJKSTRA",
-    expectedVisits: [0, 2, 1, 3, 4],
-    startNodeId: 0,
-    targetNodeId: 4,
-    nodes: [
-      { id: 0, x: 100, y: 200 },
-      { id: 1, x: 250, y: 100 },
-      { id: 2, x: 250, y: 300 },
-      { id: 3, x: 400, y: 100 },
-      { id: 4, x: 400, y: 300 },
-    ],
-    edges: [
-      { sourceId: 0, targetId: 1, weight: 4 },
-      { sourceId: 0, targetId: 2, weight: 2 },
-      { sourceId: 1, targetId: 2, weight: 1 },
-      { sourceId: 1, targetId: 3, weight: 3 },
-      { sourceId: 2, targetId: 3, weight: 5 },
-      { sourceId: 2, targetId: 4, weight: 8 },
-      { sourceId: 3, targetId: 4, weight: 2 },
-    ],
+      "Encontre o caminho mais curto até o destino. Escolha o próximo passo avaliando a menor distância acumulada!",
   },
 ];
 
+// --- MOTOR DE GERAÇÃO DINÂMICA ---
+const generateRandomGraph = (numNodes: number, isWeighted: boolean) => {
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
+
+  const centerX = 350;
+  const centerY = 250;
+  const radiusX = 220;
+  const radiusY = 160;
+
+  for (let i = 0; i < numNodes; i++) {
+    const angle = ((i + Math.random() * 0.5) / numNodes) * 2 * Math.PI;
+
+    const jitterX = (Math.random() - 0.5) * 50;
+    const jitterY = (Math.random() - 0.5) * 50;
+
+    nodes.push({
+      id: i,
+      x: centerX + radiusX * Math.cos(angle) + jitterX,
+      y: centerY + radiusY * Math.sin(angle) + jitterY,
+    });
+  }
+
+  for (let i = 1; i < numNodes; i++) {
+    const target = Math.max(0, i - (Math.floor(Math.random() * 3) + 1));
+    edges.push({
+      sourceId: target,
+      targetId: i,
+      weight: isWeighted ? Math.floor(Math.random() * 9) + 1 : 1,
+    });
+  }
+
+  const extra = Math.floor(numNodes / 2.5);
+  for (let i = 0; i < extra; i++) {
+    const u = Math.floor(Math.random() * numNodes);
+    const v = Math.floor(Math.random() * numNodes);
+
+    if (u !== v) {
+      const exists = edges.some(
+        (e) =>
+          (e.sourceId === u && e.targetId === v) ||
+          (e.sourceId === v && e.targetId === u),
+      );
+      if (!exists) {
+        edges.push({
+          sourceId: u,
+          targetId: v,
+          weight: isWeighted ? Math.floor(Math.random() * 9) + 1 : 1,
+        });
+      }
+    }
+  }
+  return { nodes, edges };
+};
+
+const generateDynamicLevel = (algo: string) => {
+  if (algo === "BFS" || algo === "DFS") {
+    const numNodes = Math.floor(Math.random() * 3) + 5; 
+    const { nodes, edges } = generateRandomGraph(numNodes, false);
+    const startNodeId = 0;
+
+    let steps =
+      algo === "BFS"
+        ? generateBFSSteps(startNodeId, numNodes, edges, false)
+        : generateDFSSteps(startNodeId, numNodes, edges, false);
+
+    const expectedVisits = Array.from(
+      new Set(steps.filter((s) => s.type === "visit").map((s) => s.nodeId)),
+    );
+
+    return { nodes, edges, expectedVisits, startNodeId };
+  }
+
+  if (algo === "DIJKSTRA") {
+    const numNodes = 6;
+    const { nodes, edges } = generateRandomGraph(numNodes, true);
+    const startNodeId = 0;
+    const targetNodeId = numNodes - 1;
+
+    const steps = generateDijkstraSteps(startNodeId, numNodes, edges);
+    const lastStep = steps[steps.length - 1];
+    const path = getShortestPath(startNodeId, targetNodeId, lastStep.previous);
+
+    return { nodes, edges, expectedVisits: path, startNodeId, targetNodeId };
+  }
+
+  if (algo === "AVL") {
+    const cases = ["LL", "RR", "LR", "RL"];
+    const correctRotation = cases[Math.floor(Math.random() * cases.length)] as
+      | "LL"
+      | "RR"
+      | "LR"
+      | "RL";
+
+    const centerX = 250;
+    const centerY = 150;
+    let nodes: Node[] = [];
+    let edges: Edge[] = [];
+
+    if (correctRotation === "LL") {
+      nodes = [
+        { id: 2, x: centerX, y: centerY },
+        { id: 1, x: centerX - 80, y: centerY + 80 },
+        { id: 0, x: centerX - 160, y: centerY + 160 },
+      ];
+      edges = [
+        { sourceId: 2, targetId: 1, weight: 1 },
+        { sourceId: 1, targetId: 0, weight: 1 },
+      ];
+    } else if (correctRotation === "RR") {
+      nodes = [
+        { id: 0, x: centerX, y: centerY },
+        { id: 1, x: centerX + 80, y: centerY + 80 },
+        { id: 2, x: centerX + 160, y: centerY + 160 },
+      ];
+      edges = [
+        { sourceId: 0, targetId: 1, weight: 1 },
+        { sourceId: 1, targetId: 2, weight: 1 },
+      ];
+    } else if (correctRotation === "LR") {
+      nodes = [
+        { id: 2, x: centerX, y: centerY },
+        { id: 0, x: centerX - 100, y: centerY + 80 },
+        { id: 1, x: centerX - 20, y: centerY + 160 },
+      ];
+      edges = [
+        { sourceId: 2, targetId: 0, weight: 1 },
+        { sourceId: 0, targetId: 1, weight: 1 },
+      ];
+    } else if (correctRotation === "RL") {
+      nodes = [
+        { id: 0, x: centerX, y: centerY },
+        { id: 2, x: centerX + 100, y: centerY + 80 },
+        { id: 1, x: centerX + 20, y: centerY + 160 },
+      ];
+      edges = [
+        { sourceId: 0, targetId: 2, weight: 1 },
+        { sourceId: 2, targetId: 1, weight: 1 },
+      ];
+    }
+
+    return { nodes, edges, expectedVisits: [], correctRotation };
+  }
+
+  return { nodes: [], edges: [], expectedVisits: [] };
+};
+
 function App() {
-  // === ESTADO DA SPLASH SCREEN ===
   const [showSplash, setShowSplash] = useState(true);
 
   // === ESTADOS DO MODO SANDBOX ===
@@ -147,13 +230,14 @@ function App() {
 
   // --- ESTADOS DO JOGO ---
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+  const [dynamicLevel, setDynamicLevel] = useState<any>(null); 
   const [lives, setLives] = useState(3);
   const [gameStatus, setGameStatus] = useState<"playing" | "won" | "lost">(
     "playing",
   );
   const [playerPath, setPlayerPath] = useState<number[]>([]);
 
-  // --- ESTADOS DE ANIMAÇÃO ---
+  // --- ESTADOS DE ANIMAÇÃO E INTERAÇÃO ---
   const [selectedAlgo, setSelectedAlgo] = useState<"BFS" | "DFS" | "DIJKSTRA">(
     "BFS",
   );
@@ -163,49 +247,34 @@ function App() {
   const [visitedNodes, setVisitedNodes] = useState<Set<number>>(new Set());
   const [queueNodes, setQueueNodes] = useState<Set<number>>(new Set());
 
-  // --- ESTADO DE ANIMAÇÃO DE ROTAÇÃO AVL ---
   const [isRotating, setIsRotating] = useState(false);
   const rotationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // --- ESTADO DE SELEÇÃO DE NÓS PARA ROTAÇÃO ---
   const [selectedNodesForRotation, setSelectedNodesForRotation] = useState<
     number[]
   >([]);
-
-  // --- ESTADO DE ERRO PARA ROTAÇÃO INCORRETA ---
   const [errorNodesForRotation, setErrorNodesForRotation] = useState<number[]>(
     [],
   );
   const [errorMessage, setErrorMessage] = useState<string>("");
 
-  // === TIMER DA SPLASH SCREEN ===
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 3000);
+    const timer = setTimeout(() => setShowSplash(false), 3000);
     return () => clearTimeout(timer);
   }, []);
 
-  // Carrega a fase sempre que mudar de nível ou modo
-  useEffect(() => {
-    if (appMode === "game") {
-      const levelData = LEVELS[currentLevelIndex];
-      setNodes(levelData.nodes);
-      setEdges(levelData.edges);
-      setIsDirected(false);
-      resetGame();
-    }
-  }, [appMode, currentLevelIndex]);
-
   useEffect(() => {
     return () => {
-      if (rotationTimeoutRef.current) {
-        clearTimeout(rotationTimeoutRef.current);
-      }
+      if (rotationTimeoutRef.current) clearTimeout(rotationTimeoutRef.current);
     };
   }, []);
 
-  const resetGame = () => {
+  useEffect(() => {
+    if (appMode === "game") {
+      loadLevel(currentLevelIndex);
+    }
+  }, [appMode]);
+
+  const resetGameStates = () => {
     setLives(3);
     setGameStatus("playing");
     setPlayerPath([]);
@@ -213,33 +282,48 @@ function App() {
     setQueueNodes(new Set());
   };
 
+  const loadLevel = (index: number) => {
+    setCurrentLevelIndex(index);
+    const config = LEVEL_CONFIGS[index];
+    const data = generateDynamicLevel(config.algo);
+
+    setDynamicLevel({ ...config, ...data });
+    setNodes(data.nodes);
+    setEdges(data.edges);
+    setIsDirected(false);
+    resetGameStates();
+  };
+
+  const resetGame = () => {
+    loadLevel(currentLevelIndex);
+  };
+
   const nextLevel = () => {
-    if (currentLevelIndex < LEVELS.length - 1) {
-      setCurrentLevelIndex((prev) => prev + 1);
-    } else {
-      setCurrentLevelIndex(0);
-    }
+    const nextIdx =
+      currentLevelIndex < LEVEL_CONFIGS.length - 1 ? currentLevelIndex + 1 : 0;
+    loadLevel(nextIdx);
   };
 
   const handleGameNodeClick = (nodeId: number) => {
-    if (gameStatus !== "playing") return;
+    if (gameStatus !== "playing" || !dynamicLevel) return;
 
-    const currentLevel = LEVELS[currentLevelIndex];
+    if (dynamicLevel.algo === "AVL") return;
 
-    if (currentLevel.algo === "AVL") return;
+    if (dynamicLevel.algo === "DIJKSTRA") {
+      const { startNodeId, targetNodeId, expectedVisits } = dynamicLevel;
 
-    if (currentLevel.algo === "DIJKSTRA") {
-      const startNodeId = currentLevel.startNodeId;
-      const targetNodeId = currentLevel.targetNodeId;
+      if (!expectedVisits || expectedVisits.length === 0) {
+        setGameStatus("won");
+        return;
+      }
 
       if (playerPath.length === 0) {
         if (nodeId === startNodeId) {
           setPlayerPath([nodeId]);
           setVisitedNodes((prev) => new Set(prev).add(nodeId));
         } else {
-          const newLives = lives - 1;
-          setLives(newLives);
-          if (newLives <= 0) setGameStatus("lost");
+          setLives((l) => l - 1);
+          if (lives - 1 <= 0) setGameStatus("lost");
         }
         return;
       }
@@ -252,25 +336,21 @@ function App() {
       );
 
       if (!isConnected) {
-        const newLives = lives - 1;
-        setLives(newLives);
-        if (newLives <= 0) setGameStatus("lost");
+        setLives((l) => l - 1);
+        if (lives - 1 <= 0) setGameStatus("lost");
         return;
       }
 
       const nextExpectedIndex = playerPath.length;
-      if (nodeId === currentLevel.expectedVisits[nextExpectedIndex]) {
+      if (nodeId === expectedVisits[nextExpectedIndex]) {
         const newPath = [...playerPath, nodeId];
         setPlayerPath(newPath);
         setVisitedNodes((prev) => new Set(prev).add(nodeId));
 
-        if (nodeId === targetNodeId) {
-          setGameStatus("won");
-        }
+        if (nodeId === targetNodeId) setGameStatus("won");
       } else {
-        const newLives = lives - 1;
-        setLives(newLives);
-        if (newLives <= 0) setGameStatus("lost");
+        setLives((l) => l - 1);
+        if (lives - 1 <= 0) setGameStatus("lost");
       }
       return;
     }
@@ -278,67 +358,63 @@ function App() {
     if (playerPath.includes(nodeId)) return;
     const nextExpectedIndex = playerPath.length;
 
-    if (nodeId === currentLevel.expectedVisits[nextExpectedIndex]) {
+    if (nodeId === dynamicLevel.expectedVisits[nextExpectedIndex]) {
       const newPath = [...playerPath, nodeId];
       setPlayerPath(newPath);
       setVisitedNodes((prev) => new Set(prev).add(nodeId));
-      if (newPath.length === currentLevel.expectedVisits.length)
+      if (newPath.length === dynamicLevel.expectedVisits.length)
         setGameStatus("won");
     } else {
-      const newLives = lives - 1;
-      setLives(newLives);
-      if (newLives <= 0) setGameStatus("lost");
+      setLives((l) => l - 1);
+      if (lives - 1 <= 0) setGameStatus("lost");
     }
   };
 
-  const handleRotationChallenge = (direction: "left" | "right") => {
-    if (currentLevelIndex !== 2 || gameStatus !== "playing") return;
+  const handleRotationGameChallenge = (
+    rotationType: "LL" | "RR" | "LR" | "RL",
+  ) => {
+    if (!dynamicLevel || gameStatus !== "playing") return;
 
-    const isCorrect = direction === "right";
+    if (rotationType === dynamicLevel.correctRotation) {
+      let balancedNodes = nodes;
+      let balancedEdges = edges;
 
-    if (isCorrect) {
-      const balancedNodes = performRightRotation(nodes);
-      const balancedEdges = getBalancedEdges(1, 0, 2);
+      if (rotationType === "LL") {
+        balancedNodes = performRightRotation(nodes);
+        balancedEdges = getBalancedEdges(1, 0, 2);
+      } else if (rotationType === "RR") {
+        balancedNodes = performLeftRotation(nodes);
+        balancedEdges = getBalancedEdges(1, 0, 2);
+      } else if (rotationType === "LR") {
+        balancedNodes = performLRRotation(nodes);
+        balancedEdges = getBalancedEdges(0, 2, 1);
+      } else if (rotationType === "RL") {
+        balancedNodes = performRLRotation(nodes);
+        balancedEdges = getBalancedEdges(2, 0, 1);
+      }
 
       setNodes(balancedNodes);
       setEdges(balancedEdges);
       setGameStatus("won");
-      setVisitedNodes(new Set([0, 1, 2]));
+      setVisitedNodes(new Set(nodes.map((n) => n.id)));
     } else {
-      const newLives = lives - 1;
-      setLives(newLives);
-      if (newLives <= 0) {
-        setGameStatus("lost");
-      }
+      setLives((l) => l - 1);
+      if (lives - 1 <= 0) setGameStatus("lost");
     }
   };
 
-  const validateRotationSelection = (
-    selectedIds: number[],
-    rotationType: "LL" | "RR" | "LR" | "RL",
-  ): { isValid: boolean; message: string } => {
-    if (selectedIds.length !== 3) {
-      return { isValid: false, message: "Selecione exatamente 3 nós." };
-    }
-    return { isValid: true, message: "" };
-  };
-
+  // --- FUNÇÕES DE ROTAÇÃO MANUAL (SANDBOX) ---
   const validateRotationCorrectness = (
     selectedIds: number[],
     currentEdges: Edge[],
     rotationType: "LL" | "RR" | "LR" | "RL",
   ): { isValid: boolean; errorIds: number[]; message: string } => {
-    if (selectedIds.length !== 3) {
+    if (selectedIds.length !== 3)
       return {
         isValid: false,
         errorIds: selectedIds,
         message: "Selecione exatamente 3 nós.",
       };
-    }
-
-    const hasEdge = (s: number, t: number) =>
-      currentEdges.some((e) => e.sourceId === s && e.targetId === t);
-
     const findParentWithTwoChildren = () => {
       for (const parent of selectedIds) {
         const children = currentEdges
@@ -346,15 +422,11 @@ function App() {
             (e) => e.sourceId === parent && selectedIds.includes(e.targetId),
           )
           .map((e) => e.targetId);
-
-        if (children.length === 2) {
-          const [child1, child2] = children;
-          return { parent, child1, child2 };
-        }
+        if (children.length === 2)
+          return { parent, child1: children[0], child2: children[1] };
       }
       return null;
     };
-
     const findChain = () => {
       for (const root of selectedIds) {
         const childrenOfRoot = currentEdges
@@ -362,19 +434,14 @@ function App() {
             (e) => e.sourceId === root && selectedIds.includes(e.targetId),
           )
           .map((e) => e.targetId);
-
         for (const child of childrenOfRoot) {
           const grandchildren = currentEdges
             .filter(
               (e) => e.sourceId === child && selectedIds.includes(e.targetId),
             )
             .map((e) => e.targetId);
-
-          if (grandchildren.length > 0) {
-            for (const grandchild of grandchildren) {
-              return { root, child, grandchild };
-            }
-          }
+          if (grandchildren.length > 0)
+            return { root, child, grandchild: grandchildren[0] };
         }
       }
       return null;
@@ -383,14 +450,13 @@ function App() {
     const twoChildren = findParentWithTwoChildren();
     const chain = findChain();
 
-    if (!twoChildren && !chain) {
+    if (!twoChildren && !chain)
       return {
         isValid: false,
         errorIds: selectedIds,
         message:
           "Selecione: (1) um nó pai com 2 filhos, ou (2) uma cadeia: avô -> pai -> filho.",
       };
-    }
 
     let root: number, child: number, grandchild: number;
     let currentCase: "LL" | "RR" | "LR" | "RL" | null = null;
@@ -398,7 +464,6 @@ function App() {
     if (twoChildren) {
       root = twoChildren.parent;
       const { child1, child2 } = twoChildren;
-
       const smaller = child1 < child2 ? child1 : child2;
       const larger = child1 < child2 ? child2 : child1;
 
@@ -423,30 +488,21 @@ function App() {
       root = chain.root;
       child = chain.child;
       grandchild = chain.grandchild;
-
       if (child < root) {
-        if (grandchild < child) {
-          currentCase = "LL";
-        } else if (grandchild > child) {
-          currentCase = "LR";
-        }
+        if (grandchild < child) currentCase = "LL";
+        else if (grandchild > child) currentCase = "LR";
       } else if (child > root) {
-        if (grandchild > child) {
-          currentCase = "RR";
-        } else if (grandchild < child) {
-          currentCase = "RL";
-        }
+        if (grandchild > child) currentCase = "RR";
+        else if (grandchild < child) currentCase = "RL";
       }
     }
 
-    if (currentCase === null) {
+    if (currentCase === null)
       return {
         isValid: false,
         errorIds: selectedIds,
         message: "Não foi possível detectar o caso AVL.",
       };
-    }
-
     if (rotationType !== currentCase) {
       const rotationNames: Record<string, string> = {
         LL: "Rotação Simples à Direita (LL)",
@@ -460,7 +516,6 @@ function App() {
         message: `Rotação incorreta! Este caso requer: ${rotationNames[currentCase]}`,
       };
     }
-
     return { isValid: true, errorIds: [], message: "" };
   };
 
@@ -469,7 +524,6 @@ function App() {
       alert("Selecione exatamente 3 nós para aplicar a rotação.");
       return;
     }
-
     const validation = validateRotationCorrectness(
       selectedNodesForRotation,
       edges,
@@ -479,31 +533,26 @@ function App() {
     if (!validation.isValid) {
       setErrorNodesForRotation(validation.errorIds);
       setErrorMessage(validation.message);
-
       if (rotationTimeoutRef.current) clearTimeout(rotationTimeoutRef.current);
       rotationTimeoutRef.current = setTimeout(() => {
         setErrorNodesForRotation([]);
         setErrorMessage("");
         setSelectedNodesForRotation([]);
       }, 3000);
-
       return;
     }
 
     setErrorNodesForRotation([]);
     setErrorMessage("");
-
     const [rootId, leftId, rightId] = selectedNodesForRotation;
     const selectedNodes = nodes.filter((n) =>
       selectedNodesForRotation.includes(n.id),
     );
-
     const centerX = selectedNodes.reduce((sum, n) => sum + n.x, 0) / 3;
     const centerY = selectedNodes.reduce((sum, n) => sum + n.y, 0) / 3;
 
     let newParentId: number;
     let oldParentId: number;
-
     switch (rotationType) {
       case "LL":
       case "RR":
@@ -527,15 +576,12 @@ function App() {
       if (
         selectedNodesForRotation.includes(edge.sourceId) &&
         selectedNodesForRotation.includes(edge.targetId)
-      ) {
+      )
         return;
-      }
-
-      if (edge.sourceId === oldParentId) {
+      if (edge.sourceId === oldParentId)
         redirectedEdges.push({ ...edge, sourceId: newParentId });
-      } else if (edge.targetId === oldParentId) {
+      else if (edge.targetId === oldParentId)
         redirectedEdges.push({ ...edge, targetId: newParentId });
-      }
     });
 
     const externalEdges = edges.filter(
@@ -543,7 +589,6 @@ function App() {
         !selectedNodesForRotation.includes(e.sourceId) &&
         !selectedNodesForRotation.includes(e.targetId),
     );
-
     let newNodes: Node[];
     let newEdges: Edge[];
 
@@ -662,13 +707,12 @@ function App() {
     const nodesCount = maxNodeId + 1;
 
     let steps: any[] = [];
-    if (selectedAlgo === "BFS") {
+    if (selectedAlgo === "BFS")
       steps = generateBFSSteps(startId, nodesCount, edges, isDirected);
-    } else if (selectedAlgo === "DFS") {
+    else if (selectedAlgo === "DFS")
       steps = generateDFSSteps(startId, nodesCount, edges, isDirected);
-    } else if (selectedAlgo === "DIJKSTRA") {
+    else if (selectedAlgo === "DIJKSTRA")
       steps = generateDijkstraSteps(startId, nodesCount, edges);
-    }
 
     setIsAnimating(true);
     setVisitedNodes(new Set());
@@ -681,11 +725,10 @@ function App() {
         setIsAnimating(false);
         return;
       }
-
       const step = steps[currentStep];
-      if (step.type === "queue" && step.nodeId !== undefined) {
+      if (step.type === "queue" && step.nodeId !== undefined)
         setQueueNodes((prev) => new Set(prev).add(step.nodeId));
-      } else if (step.type === "visit" && step.nodeId !== undefined) {
+      else if (step.type === "visit" && step.nodeId !== undefined) {
         setQueueNodes((prev) => {
           const n = new Set(prev);
           n.delete(step.nodeId);
@@ -703,7 +746,6 @@ function App() {
   };
   const deleteEdge = (index: number) =>
     setEdges(edges.filter((_, i) => i !== index));
-
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: number) => {
     if (appMode === "game") return;
     if (activeTool === "cursor") {
@@ -732,7 +774,6 @@ function App() {
     if (appMode === "game") return;
     if (activeTool === "add-node") {
       const rect = e.currentTarget.getBoundingClientRect();
-
       let newId: number;
       const customId = customNodeId.trim();
 
@@ -750,11 +791,8 @@ function App() {
       } else {
         const usedIds = new Set(nodes.map((n) => n.id));
         newId = 0;
-        while (usedIds.has(newId)) {
-          newId++;
-        }
+        while (usedIds.has(newId)) newId++;
       }
-
       setNodes([
         ...nodes,
         { id: newId, x: e.clientX - rect.left, y: e.clientY - rect.top },
@@ -778,14 +816,12 @@ function App() {
         setErrorNodesForRotation([]);
         setErrorMessage("");
       }
-
-      if (selectedNodesForRotation.includes(nodeId)) {
+      if (selectedNodesForRotation.includes(nodeId))
         setSelectedNodesForRotation(
           selectedNodesForRotation.filter((id) => id !== nodeId),
         );
-      } else if (selectedNodesForRotation.length < 3) {
+      else if (selectedNodesForRotation.length < 3)
         setSelectedNodesForRotation([...selectedNodesForRotation, nodeId]);
-      }
       return;
     }
 
@@ -827,8 +863,7 @@ function App() {
   const getNode = (id: number) => nodes.find((n) => n.id === id);
 
   const renderSidebarContent = () => {
-    const currentLevel = LEVELS[currentLevelIndex];
-    if (appMode === "game") {
+    if (appMode === "game" && dynamicLevel) {
       return (
         <div className="space-y-6">
           <div className="flex flex-col gap-2">
@@ -836,10 +871,10 @@ function App() {
               Escolher Nível
             </h3>
             <div className="flex gap-2">
-              {LEVELS.map((_, idx) => (
+              {LEVEL_CONFIGS.map((_, idx) => (
                 <button
                   key={idx}
-                  onClick={() => setCurrentLevelIndex(idx)}
+                  onClick={() => loadLevel(idx)}
                   className={`w-10 h-10 rounded-lg font-bold transition-all border-2 ${
                     currentLevelIndex === idx
                       ? "bg-ponto-accent text-ponto-darker border-ponto-accent shadow-md scale-110"
@@ -854,13 +889,13 @@ function App() {
 
           <div className="bg-ponto-darker text-white rounded-xl p-5 shadow-lg border-2 border-ponto-muted relative overflow-hidden">
             <div className="absolute top-0 right-0 bg-ponto-muted text-ponto-accent text-xs font-bold px-3 py-1 rounded-bl-lg">
-              {currentLevel.algo}
+              {dynamicLevel.algo}
             </div>
             <h2 className="text-lg font-bold mb-2 mt-2 text-ponto-accent">
-              🎯 {currentLevel.title}
+              🎯 {dynamicLevel.title}
             </h2>
             <p className="text-sm text-slate-300 mb-4">
-              {currentLevel.description}
+              {dynamicLevel.description}
             </p>
 
             <div className="bg-ponto-dark rounded p-3 mb-4 flex justify-between items-center">
@@ -874,47 +909,59 @@ function App() {
               </span>
             </div>
 
-            {currentLevel.algo === "AVL" && gameStatus === "playing" && (
+            {/* PAINEL AVL DINÂMICO - Agora com as 4 opções! */}
+            {dynamicLevel.algo === "AVL" && gameStatus === "playing" && (
               <div className="space-y-3 mt-4">
                 <p className="text-xs font-bold text-ponto-accent uppercase text-center">
                   Qual rotação resolve este caso?
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <button
-                    onClick={() => handleRotationChallenge("left")}
+                    onClick={() => handleRotationGameChallenge("RR")}
                     className="flex flex-col items-center gap-2 bg-ponto-dark hover:bg-ponto-muted text-white p-3 rounded-lg border-b-4 border-slate-900 transition-all active:border-b-0 active:translate-y-1"
                   >
                     <RotateCcw size={20} className="scale-x-[-1]" />
                     <span className="text-[10px] font-bold">ESQUERDA (RR)</span>
                   </button>
                   <button
-                    onClick={() => handleRotationChallenge("right")}
+                    onClick={() => handleRotationGameChallenge("LL")}
                     className="flex flex-col items-center gap-2 bg-ponto-dark hover:bg-ponto-muted text-white p-3 rounded-lg border-b-4 border-slate-900 transition-all active:border-b-0 active:translate-y-1"
                   >
                     <RotateCcw size={20} />
                     <span className="text-[10px] font-bold">DIREITA (LL)</span>
                   </button>
+                  <button
+                    onClick={() => handleRotationGameChallenge("LR")}
+                    className="flex flex-col items-center gap-2 bg-ponto-dark hover:bg-ponto-muted text-white p-3 rounded-lg border-b-4 border-slate-900 transition-all active:border-b-0 active:translate-y-1"
+                  >
+                    <RotateCcw size={20} />
+                    <span className="text-[10px] font-bold">ESQ-DIR (LR)</span>
+                  </button>
+                  <button
+                    onClick={() => handleRotationGameChallenge("RL")}
+                    className="flex flex-col items-center gap-2 bg-ponto-dark hover:bg-ponto-muted text-white p-3 rounded-lg border-b-4 border-slate-900 transition-all active:border-b-0 active:translate-y-1"
+                  >
+                    <RotateCcw size={20} className="scale-x-[-1]" />
+                    <span className="text-[10px] font-bold">DIR-ESQ (RL)</span>
+                  </button>
                 </div>
               </div>
             )}
 
-            {currentLevel.algo === "DIJKSTRA" && gameStatus === "playing" && (
+            {dynamicLevel.algo === "DIJKSTRA" && gameStatus === "playing" && (
               <div className="space-y-3 mt-4">
                 <div className="bg-ponto-dark rounded p-3 flex justify-between items-center">
-                  <span className="text-xs text-slate-400">Início:</span>
+                  <span className="text-xs text-slate-400">Origem:</span>
                   <span className="font-bold text-green-400">
-                    Nó {currentLevel.startNodeId}
+                    Nó {dynamicLevel.startNodeId}
                   </span>
                 </div>
                 <div className="bg-ponto-dark rounded p-3 flex justify-between items-center">
                   <span className="text-xs text-slate-400">Destino:</span>
                   <span className="font-bold text-red-400">
-                    Nó {currentLevel.targetNodeId}
+                    Nó {dynamicLevel.targetNodeId}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 text-center">
-                  Encontre o caminho mínimo!
-                </p>
               </div>
             )}
 
@@ -934,15 +981,17 @@ function App() {
                 onClick={gameStatus === "won" ? nextLevel : resetGame}
                 className="w-full bg-slate-200 text-ponto-darker font-bold py-2 rounded shadow-sm hover:bg-white transition-colors"
               >
-                {gameStatus === "won" ? "Próxima Fase" : "🔄 Recomeçar"}
+                {gameStatus === "won"
+                  ? "Próxima Fase"
+                  : "🔄 Recomeçar (Novo Grafo)"}
               </button>
             )}
           </div>
 
-          {currentLevel.algo !== "AVL" && (
+          {dynamicLevel.algo !== "AVL" && (
             <div className="border-t border-ponto-muted/30 pt-4">
               <h3 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-2">
-                Progresso do Algoritmo
+                Seu Caminho
               </h3>
               <div className="flex gap-2 flex-wrap">
                 {playerPath.map((id, index) => (
@@ -970,7 +1019,7 @@ function App() {
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="ID do nó (deixe vazio para auto)"
+                placeholder="ID do nó (vazio para auto)"
                 value={customNodeId}
                 onChange={(e) => setCustomNodeId(e.target.value)}
                 className="w-full rounded-md border border-ponto-muted bg-ponto-darker text-white px-3 py-2 text-sm focus:border-ponto-accent focus:outline-none placeholder-slate-500"
@@ -1017,7 +1066,7 @@ function App() {
               ) : (
                 <Play size={18} />
               )}
-              {isAnimating ? "Executando..." : `Animar ${selectedAlgo}`}
+              {isAnimating ? "Rodando..." : `Animar ${selectedAlgo}`}
             </button>
           </div>
         </div>
@@ -1029,10 +1078,10 @@ function App() {
           <div className="space-y-3">
             <p className="text-xs text-slate-400">
               {selectedNodesForRotation.length === 0
-                ? "Selecione a ferramenta de rotação (ícone de seta) e clique em 3 nós no grafo"
+                ? "Selecione a ferramenta de rotação (ícone) e clique em 3 nós"
                 : selectedNodesForRotation.length < 3
-                ? `Nós selecionados: ${selectedNodesForRotation.length}/3`
-                : "3 nós selecionados! Escolha a rotação:"}
+                  ? `Nós selecionados: ${selectedNodesForRotation.length}/3`
+                  : "3 nós selecionados! Escolha a rotação:"}
             </p>
 
             {errorMessage && (
@@ -1045,11 +1094,7 @@ function App() {
               <button
                 onClick={() => handleManualRotation("LL")}
                 disabled={selectedNodesForRotation.length !== 3}
-                className={`flex flex-col items-center gap-1 p-3 rounded-lg border-b-4 transition-all active:border-b-0 active:translate-y-1 ${
-                  selectedNodesForRotation.length !== 3
-                    ? "bg-ponto-muted/30 border-slate-900 text-slate-500 cursor-not-allowed"
-                    : "bg-ponto-dark hover:bg-ponto-muted border-slate-900 text-white"
-                }`}
+                className={`flex flex-col items-center gap-1 p-3 rounded-lg border-b-4 transition-all active:border-b-0 active:translate-y-1 ${selectedNodesForRotation.length !== 3 ? "bg-ponto-muted/30 border-slate-900 text-slate-500 cursor-not-allowed" : "bg-ponto-dark hover:bg-ponto-muted border-slate-900 text-white"}`}
               >
                 <RotateCcw size={20} />
                 <span className="text-[10px] font-bold">LL (Dir.)</span>
@@ -1057,11 +1102,7 @@ function App() {
               <button
                 onClick={() => handleManualRotation("RR")}
                 disabled={selectedNodesForRotation.length !== 3}
-                className={`flex flex-col items-center gap-1 p-3 rounded-lg border-b-4 transition-all active:border-b-0 active:translate-y-1 ${
-                  selectedNodesForRotation.length !== 3
-                    ? "bg-ponto-muted/30 border-slate-900 text-slate-500 cursor-not-allowed"
-                    : "bg-ponto-dark hover:bg-ponto-muted border-slate-900 text-white"
-                }`}
+                className={`flex flex-col items-center gap-1 p-3 rounded-lg border-b-4 transition-all active:border-b-0 active:translate-y-1 ${selectedNodesForRotation.length !== 3 ? "bg-ponto-muted/30 border-slate-900 text-slate-500 cursor-not-allowed" : "bg-ponto-dark hover:bg-ponto-muted border-slate-900 text-white"}`}
               >
                 <RotateCcw size={20} className="scale-x-[-1]" />
                 <span className="text-[10px] font-bold">RR (Esq.)</span>
@@ -1069,11 +1110,7 @@ function App() {
               <button
                 onClick={() => handleManualRotation("LR")}
                 disabled={selectedNodesForRotation.length !== 3}
-                className={`flex flex-col items-center gap-1 p-3 rounded-lg border-b-4 transition-all active:border-b-0 active:translate-y-1 ${
-                  selectedNodesForRotation.length !== 3
-                    ? "bg-ponto-muted/30 border-slate-900 text-slate-500 cursor-not-allowed"
-                    : "bg-ponto-dark hover:bg-ponto-muted border-slate-900 text-white"
-                }`}
+                className={`flex flex-col items-center gap-1 p-3 rounded-lg border-b-4 transition-all active:border-b-0 active:translate-y-1 ${selectedNodesForRotation.length !== 3 ? "bg-ponto-muted/30 border-slate-900 text-slate-500 cursor-not-allowed" : "bg-ponto-dark hover:bg-ponto-muted border-slate-900 text-white"}`}
               >
                 <RotateCcw size={20} />
                 <span className="text-[10px] font-bold">LR (Esq.-Dir.)</span>
@@ -1081,11 +1118,7 @@ function App() {
               <button
                 onClick={() => handleManualRotation("RL")}
                 disabled={selectedNodesForRotation.length !== 3}
-                className={`flex flex-col items-center gap-1 p-3 rounded-lg border-b-4 transition-all active:border-b-0 active:translate-y-1 ${
-                  selectedNodesForRotation.length !== 3
-                    ? "bg-ponto-muted/30 border-slate-900 text-slate-500 cursor-not-allowed"
-                    : "bg-ponto-dark hover:bg-ponto-muted border-slate-900 text-white"
-                }`}
+                className={`flex flex-col items-center gap-1 p-3 rounded-lg border-b-4 transition-all active:border-b-0 active:translate-y-1 ${selectedNodesForRotation.length !== 3 ? "bg-ponto-muted/30 border-slate-900 text-slate-500 cursor-not-allowed" : "bg-ponto-dark hover:bg-ponto-muted border-slate-900 text-white"}`}
               >
                 <RotateCcw size={20} className="scale-x-[-1]" />
                 <span className="text-[10px] font-bold">RL (Dir.-Esq.)</span>
@@ -1173,7 +1206,7 @@ function App() {
             <button
               onClick={() => {
                 setAppMode("game");
-                setCurrentLevelIndex(0);
+                loadLevel(0);
               }}
               className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all ${appMode === "game" ? "bg-ponto-accent text-ponto-darker shadow-sm" : "text-slate-300 hover:text-ponto-accent"}`}
             >
@@ -1270,9 +1303,7 @@ function App() {
               const midX = (s.x + t.x) / 2;
               const midY = (s.y + t.y) / 2;
               const isDijkstraLevel =
-                appMode === "game" &&
-                currentLevelIndex < LEVELS.length &&
-                LEVELS[currentLevelIndex].algo === "DIJKSTRA";
+                appMode === "game" && dynamicLevel?.algo === "DIJKSTRA";
               const showWeight = appMode === "sandbox" || isDijkstraLevel;
               return (
                 <g
