@@ -1,56 +1,63 @@
-interface Edge {
+export interface Edge {
   sourceId: number;
   targetId: number;
   weight: number;
 }
 
-export interface AlgorithmStep {
-  type: 'visit' | 'queue';
-  nodeId: number;
+export interface DFSStep {
+  type: 'visit' | 'queue' | 'edge';
+  nodeId?: number;
+  edge?: Edge;
 }
 
 export function generateDFSSteps(
   startNodeId: number, 
   nodesCount: number, 
   edges: Edge[],
-  isDirected: boolean 
-): AlgorithmStep[] {
-  const steps: AlgorithmStep[] = [];
-  const visited = new Set<number>();
-  const stack: number[] = [];
-
-  const adjacency: Record<number, number[]> = {};
-  for (let i = 0; i < nodesCount; i++) adjacency[i] = [];
+  isDirected: boolean
+): DFSStep[] {
+  const steps: DFSStep[] = [];
   
-  edges.forEach(edge => {
-    if (!adjacency[edge.sourceId]) adjacency[edge.sourceId] = [];
-    adjacency[edge.sourceId].push(edge.targetId);
+  const visited = new Set<number>();
 
-    if (!isDirected) { 
-        if (!adjacency[edge.targetId]) adjacency[edge.targetId] = [];
-        adjacency[edge.targetId].push(edge.sourceId);
+  const adjacency: Record<number, Edge[]> = {};
+  for (let i = 0; i < nodesCount; i++) adjacency[i] = [];
+
+  edges.forEach(edge => {
+    adjacency[edge.sourceId].push(edge);
+    if (!isDirected) {
+      adjacency[edge.targetId].push({ 
+        sourceId: edge.targetId, 
+        targetId: edge.sourceId, 
+        weight: edge.weight 
+      });
     }
   });
 
-  stack.push(startNodeId);
-  steps.push({ type: 'queue', nodeId: startNodeId });
+  for (let i = 0; i < nodesCount; i++) {
+    adjacency[i].sort((a, b) => a.targetId - b.targetId);
+  }
 
-  while (stack.length > 0) {
-    const currentId = stack.pop()!;
-    if (visited.has(currentId)) continue;
+  function dfsRecursive(currentNode: number) {
+    visited.add(currentNode);
+    steps.push({ type: 'visit', nodeId: currentNode });
 
-    visited.add(currentId);
-    steps.push({ type: 'visit', nodeId: currentId });
-
-    const neighbors = adjacency[currentId] || [];
-    neighbors.sort((a, b) => b - a); 
-
-    for (const neighbor of neighbors) {
-      if (!visited.has(neighbor)) {
-        stack.push(neighbor);
-        steps.push({ type: 'queue', nodeId: neighbor }); 
+    for (const edge of adjacency[currentNode]) {
+      const neighborId = edge.targetId;
+      
+      if (!visited.has(neighborId)) {
+        
+        steps.push({ type: 'edge', edge: edge });
+        
+        steps.push({ type: 'queue', nodeId: neighborId });
+        
+        dfsRecursive(neighborId);
       }
     }
   }
+
+  steps.push({ type: 'queue', nodeId: startNodeId });
+  dfsRecursive(startNodeId);
+
   return steps;
 }
