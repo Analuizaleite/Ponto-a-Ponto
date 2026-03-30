@@ -13,7 +13,7 @@ export function generateDFSSteps(
   startNodeId: number, 
   nodesCount: number, 
   edges: Edge[],
-  isDirected: boolean // NOVO
+  isDirected: boolean 
 ): AlgorithmStep[] {
   const steps: AlgorithmStep[] = [];
   const visited = new Set<number>();
@@ -26,7 +26,7 @@ export function generateDFSSteps(
     if (!adjacency[edge.sourceId]) adjacency[edge.sourceId] = [];
     adjacency[edge.sourceId].push(edge.targetId);
 
-    if (!isDirected) { // Só volta se não for direcionado
+    if (!isDirected) { 
         if (!adjacency[edge.targetId]) adjacency[edge.targetId] = [];
         adjacency[edge.targetId].push(edge.sourceId);
     }

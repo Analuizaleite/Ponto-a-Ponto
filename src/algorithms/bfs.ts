@@ -1,7 +1,7 @@
 interface Edge {
   sourceId: number;
   targetId: number;
-  weight: number; // NOVO
+  weight: number;
 }
 
 interface BFSStep {
@@ -13,29 +13,25 @@ export function generateBFSSteps(
   startNodeId: number, 
   nodesCount: number, 
   edges: Edge[],
-  isDirected: boolean // NOVO: Parâmetro para saber se respeita a seta
+  isDirected: boolean 
 ): BFSStep[] {
   const steps: BFSStep[] = [];
   const visited = new Set<number>();
   const queue: number[] = [];
 
-  // 1. Montar Lista de Adjacência
   const adjacency: Record<number, number[]> = {};
   for (let i = 0; i < nodesCount; i++) adjacency[i] = [];
 
   edges.forEach(edge => {
-    // Sempre adiciona a ida
     if (!adjacency[edge.sourceId]) adjacency[edge.sourceId] = [];
     adjacency[edge.sourceId].push(edge.targetId);
 
-    // Só adiciona a volta se NÃO for direcionado
     if (!isDirected) {
       if (!adjacency[edge.targetId]) adjacency[edge.targetId] = [];
       adjacency[edge.targetId].push(edge.sourceId);
     }
   });
 
-  // 2. BFS (O resto continua igual)
   queue.push(startNodeId);
   visited.add(startNodeId);
   steps.push({ type: 'queue', nodeId: startNodeId });
