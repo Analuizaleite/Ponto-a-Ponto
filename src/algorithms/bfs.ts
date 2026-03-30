@@ -1,36 +1,44 @@
-interface Edge {
+export interface Edge {
   sourceId: number;
   targetId: number;
   weight: number;
 }
 
-interface BFSStep {
-  type: 'visit' | 'queue';
-  nodeId: number;
+export interface BFSStep {
+  type: 'visit' | 'queue' | 'edge'; 
+  edge?: Edge;
+  nodeId?: number;
 }
 
 export function generateBFSSteps(
   startNodeId: number, 
   nodesCount: number, 
   edges: Edge[],
-  isDirected: boolean 
+  isDirected: boolean
 ): BFSStep[] {
   const steps: BFSStep[] = [];
+  
   const visited = new Set<number>();
   const queue: number[] = [];
 
-  const adjacency: Record<number, number[]> = {};
+  const adjacency: Record<number, Edge[]> = {};
   for (let i = 0; i < nodesCount; i++) adjacency[i] = [];
 
   edges.forEach(edge => {
-    if (!adjacency[edge.sourceId]) adjacency[edge.sourceId] = [];
-    adjacency[edge.sourceId].push(edge.targetId);
+    adjacency[edge.sourceId].push(edge);
 
     if (!isDirected) {
-      if (!adjacency[edge.targetId]) adjacency[edge.targetId] = [];
-      adjacency[edge.targetId].push(edge.sourceId);
+      adjacency[edge.targetId].push({ 
+        sourceId: edge.targetId, 
+        targetId: edge.sourceId, 
+        weight: edge.weight 
+      });
     }
   });
+
+  for (let i = 0; i < nodesCount; i++) {
+    adjacency[i].sort((a, b) => a.targetId - b.targetId);
+  }
 
   queue.push(startNodeId);
   visited.add(startNodeId);
@@ -40,14 +48,16 @@ export function generateBFSSteps(
     const currentId = queue.shift()!;
     steps.push({ type: 'visit', nodeId: currentId });
 
-    const neighbors = adjacency[currentId] || [];
-    neighbors.sort((a, b) => a - b);
-
-    for (const neighbor of neighbors) {
-      if (!visited.has(neighbor)) {
-        visited.add(neighbor);
-        queue.push(neighbor);
-        steps.push({ type: 'queue', nodeId: neighbor });
+    for (const edge of adjacency[currentId]) {
+      const neighborId = edge.targetId;
+      
+      if (!visited.has(neighborId)) {
+        visited.add(neighborId);
+        
+        steps.push({ type: 'edge', edge: edge });
+        
+        steps.push({ type: 'queue', nodeId: neighborId });
+        queue.push(neighborId);
       }
     }
   }
