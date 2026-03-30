@@ -122,7 +122,7 @@ const generateDynamicLevel = (algo: string) => {
     const targetNodeId = numNodes - 1;
     const steps = generateDijkstraSteps(startNodeId, numNodes, edges);
     const lastStep = steps[steps.length - 1];
-    const path = getShortestPath(startNodeId, targetNodeId, lastStep.previous);
+const path = getShortestPath(startNodeId, targetNodeId, lastStep.previous!);
     return { nodes, edges, expectedVisits: path, startNodeId, targetNodeId };
   }
 
@@ -219,6 +219,12 @@ function App() {
   const [queueNodes, setQueueNodes] = useState<Set<number>>(new Set());
   const [visitedEdges, setVisitedEdges] = useState<Set<string>>(new Set());
   const [mstTotalWeight, setMstTotalWeight] = useState<number>(0);
+  const [dijkstraDistances, setDijkstraDistances] = useState<
+    Record<number, number>
+  >({});
+  const [dijkstraPrevious, setDijkstraPrevious] = useState<
+    Record<number, number | null>
+  >({});
   const [isRotating] = useState(false);
   const rotationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedNodesForRotation, setSelectedNodesForRotation] = useState<
@@ -252,6 +258,7 @@ function App() {
     setQueueNodes(new Set());
     setVisitedEdges(new Set());
     setMstTotalWeight(0);
+    setDijkstraDistances({});
   };
 
   const loadLevel = (index: number) => {
@@ -656,6 +663,11 @@ function App() {
     setQueueNodes(new Set());
     setVisitedEdges(new Set());
     setMstTotalWeight(0);
+    setDijkstraDistances({});
+    setDijkstraPrevious({});
+    setMstTotalWeight(0);
+    setDijkstraDistances({});
+    setDijkstraPrevious({});
 
     let currentStep = 0;
     const intervalId = setInterval(() => {
@@ -665,6 +677,9 @@ function App() {
         return;
       }
       const step = steps[currentStep];
+
+      if (step.distancesState) setDijkstraDistances(step.distancesState);
+      if (step.previousState) setDijkstraPrevious(step.previousState);
 
       if (step.type === "queue" && step.nodeId !== undefined) {
         setQueueNodes((prev) => new Set(prev).add(step.nodeId));
@@ -690,241 +705,243 @@ function App() {
   };
 
   const deleteNode = (id: number) => {
-      setNodes(nodes.filter((n) => n.id !== id));
-      setEdges(edges.filter((e) => e.sourceId !== id && e.targetId !== id));
-    };
-    const deleteEdge = (index: number) =>
-      setEdges(edges.filter((_, i) => i !== index));
-    const clearAll = () => {
-      setNodes([]);
-      setEdges([]);
-      setVisitedNodes(new Set());
-      setQueueNodes(new Set());
-      setVisitedEdges(new Set());
-      setMstTotalWeight(0);
-      setIsAnimating(false);
-      setSelectedNodesForRotation([]);
-      setErrorNodesForRotation([]);
-      setErrorMessage("");
-    };
+    setNodes(nodes.filter((n) => n.id !== id));
+    setEdges(edges.filter((e) => e.sourceId !== id && e.targetId !== id));
+  };
+  const deleteEdge = (index: number) =>
+    setEdges(edges.filter((_, i) => i !== index));
+  const clearAll = () => {
+    setNodes([]);
+    setEdges([]);
+    setVisitedNodes(new Set());
+    setQueueNodes(new Set());
+    setVisitedEdges(new Set());
+    setMstTotalWeight(0);
+    setIsAnimating(false);
+    setSelectedNodesForRotation([]);
+    setErrorNodesForRotation([]);
+    setErrorMessage("");
+  };
 
-    // --- HANDLERS DO CANVAS ---
-    const handleNodeMouseDown = (e: React.MouseEvent, nodeId: number) => {
-      if (appMode === "game") return;
-      if (activeTool === "cursor") {
-        e.stopPropagation();
-        setDraggingNodeId(nodeId);
-      }
-    };
-    const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-      if (appMode === "game") return;
-      if (draggingNodeId !== null && activeTool === "cursor") {
-        const rect = e.currentTarget.getBoundingClientRect();
-        setNodes((prev) =>
-          prev.map((n) =>
-            n.id === draggingNodeId
-              ? { ...n, x: e.clientX - rect.left, y: e.clientY - rect.top }
-              : n,
-          ),
-        );
-      }
-    };
-    const handleMouseUp = () => {
-      if (draggingNodeId !== null) setDraggingNodeId(null);
-    };
-
-    const handleCanvasClick = (e: React.MouseEvent<SVGSVGElement>) => {
-      if (appMode === "game") return;
-      if (activeTool === "add-node") {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const customLabel = customNodeId.trim();
-
-        const usedIds = new Set(nodes.map((n) => n.id));
-        let newInternalId = 0;
-        while (usedIds.has(newInternalId)) newInternalId++;
-
-        let newLabel =
-          customLabel !== "" ? customLabel : newInternalId.toString();
-
-        if (customLabel !== "" && nodes.some((n) => n.label === customLabel)) {
-          alert("Esta nó já existe no grafo. Escolha outro nome.");
-          return;
-        }
-
-        setNodes([
-          ...nodes,
-          {
-            id: newInternalId,
-            label: newLabel,
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
-          },
-        ]);
-      }
-    };
-
-    const handleNodeClick = (e: React.MouseEvent, nodeId: number) => {
+  // --- HANDLERS DO CANVAS ---
+  const handleNodeMouseDown = (e: React.MouseEvent, nodeId: number) => {
+    if (appMode === "game") return;
+    if (activeTool === "cursor") {
       e.stopPropagation();
-      if (appMode === "game") {
-        handleGameNodeClick(nodeId);
-        return;
-      }
-      if (activeTool === "delete") {
-        deleteNode(nodeId);
-        return;
-      }
-      if (activeTool === "select-rotation") {
-        if (errorNodesForRotation.length > 0) {
-          setErrorNodesForRotation([]);
-          setErrorMessage("");
-        }
-        if (selectedNodesForRotation.includes(nodeId))
-          setSelectedNodesForRotation(
-            selectedNodesForRotation.filter((id) => id !== nodeId),
-          );
-        else if (selectedNodesForRotation.length < 3)
-          setSelectedNodesForRotation([...selectedNodesForRotation, nodeId]);
-        return;
-      }
-      if (activeTool === "add-edge") {
-        if (connectionSourceId === null) setConnectionSourceId(nodeId);
-        else {
-          if (connectionSourceId !== nodeId) {
-            const exists = edges.some(
-              (edge) =>
-                (edge.sourceId === connectionSourceId &&
-                  edge.targetId === nodeId) ||
-                (!isDirected &&
-                  edge.sourceId === nodeId &&
-                  edge.targetId === connectionSourceId),
-            );
-            if (!exists) {
-              const w = parseInt(prompt("Peso da aresta:", "1") || "1") || 1;
-              setEdges([
-                ...edges,
-                { sourceId: connectionSourceId, targetId: nodeId, weight: w },
-              ]);
-            }
-          }
-          setConnectionSourceId(null);
-        }
-      }
-    };
-
-    // --- RENDERIZAÇÃO DA TELA DE CARREGAMENTO ---
-    if (showSplash) {
-      return (
-        <div className="flex h-screen w-screen flex-col items-center justify-center bg-ponto-darker">
-          <img
-            src="src/assets/logo_transparente.png"
-            alt="Ponto a Ponto Logo"
-            className="w-64 md:w-80 animate-pulse mb-8"
-          />
-          <div className="flex gap-3">
-            <div
-              className="w-3 h-3 bg-ponto-accent rounded-full animate-bounce"
-              style={{ animationDelay: "0ms" }}
-            ></div>
-            <div
-              className="w-3 h-3 bg-ponto-accent rounded-full animate-bounce"
-              style={{ animationDelay: "150ms" }}
-            ></div>
-            <div
-              className="w-3 h-3 bg-ponto-accent rounded-full animate-bounce"
-              style={{ animationDelay: "300ms" }}
-            ></div>
-          </div>
-          <p className="text-ponto-accent mt-4 font-mono text-sm tracking-widest uppercase">
-            Carregando Visualizador...
-          </p>
-        </div>
+      setDraggingNodeId(nodeId);
+    }
+  };
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (appMode === "game") return;
+    if (draggingNodeId !== null && activeTool === "cursor") {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setNodes((prev) =>
+        prev.map((n) =>
+          n.id === draggingNodeId
+            ? { ...n, x: e.clientX - rect.left, y: e.clientY - rect.top }
+            : n,
+        ),
       );
     }
+  };
+  const handleMouseUp = () => {
+    if (draggingNodeId !== null) setDraggingNodeId(null);
+  };
 
-    // --- RENDERIZAÇÃO PRINCIPAL ---
+  const handleCanvasClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (appMode === "game") return;
+    if (activeTool === "add-node") {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const customLabel = customNodeId.trim();
+
+      const usedIds = new Set(nodes.map((n) => n.id));
+      let newInternalId = 0;
+      while (usedIds.has(newInternalId)) newInternalId++;
+
+      let newLabel =
+        customLabel !== "" ? customLabel : newInternalId.toString();
+
+      if (customLabel !== "" && nodes.some((n) => n.label === customLabel)) {
+        alert("Esta nó já existe no grafo. Escolha outro nome.");
+        return;
+      }
+
+      setNodes([
+        ...nodes,
+        {
+          id: newInternalId,
+          label: newLabel,
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        },
+      ]);
+    }
+  };
+
+  const handleNodeClick = (e: React.MouseEvent, nodeId: number) => {
+    e.stopPropagation();
+    if (appMode === "game") {
+      handleGameNodeClick(nodeId);
+      return;
+    }
+    if (activeTool === "delete") {
+      deleteNode(nodeId);
+      return;
+    }
+    if (activeTool === "select-rotation") {
+      if (errorNodesForRotation.length > 0) {
+        setErrorNodesForRotation([]);
+        setErrorMessage("");
+      }
+      if (selectedNodesForRotation.includes(nodeId))
+        setSelectedNodesForRotation(
+          selectedNodesForRotation.filter((id) => id !== nodeId),
+        );
+      else if (selectedNodesForRotation.length < 3)
+        setSelectedNodesForRotation([...selectedNodesForRotation, nodeId]);
+      return;
+    }
+    if (activeTool === "add-edge") {
+      if (connectionSourceId === null) setConnectionSourceId(nodeId);
+      else {
+        if (connectionSourceId !== nodeId) {
+          const exists = edges.some(
+            (edge) =>
+              (edge.sourceId === connectionSourceId &&
+                edge.targetId === nodeId) ||
+              (!isDirected &&
+                edge.sourceId === nodeId &&
+                edge.targetId === connectionSourceId),
+          );
+          if (!exists) {
+            const w = parseInt(prompt("Peso da aresta:", "1") || "1") || 1;
+            setEdges([
+              ...edges,
+              { sourceId: connectionSourceId, targetId: nodeId, weight: w },
+            ]);
+          }
+        }
+        setConnectionSourceId(null);
+      }
+    }
+  };
+
+  // --- RENDERIZAÇÃO DA TELA DE CARREGAMENTO ---
+  if (showSplash) {
     return (
-      <div className="flex h-screen flex-col bg-[#f8fafc] text-slate-900 font-sans">
-        <Header
-          appMode={appMode}
-          setAppMode={setAppMode}
-          activeTool={activeTool}
-          setActiveTool={setActiveTool}
-          isDirected={isDirected}
-          setIsDirected={setIsDirected}
-          clearAll={clearAll}
-          loadLevel={loadLevel}
-          setEdges={setEdges}
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-ponto-darker">
+        <img
+          src="src/assets/logo_transparente.png"
+          alt="Ponto a Ponto Logo"
+          className="w-64 md:w-80 animate-pulse mb-8"
         />
-
-        <div className="flex flex-1 overflow-hidden relative">
-          <GraphCanvas
-            appMode={appMode}
-            activeTool={activeTool}
-            nodes={nodes}
-            edges={edges}
-            isDirected={isDirected}
-            visitedNodes={visitedNodes}
-            queueNodes={queueNodes}
-            visitedEdges={visitedEdges}
-            selectedNodesForRotation={selectedNodesForRotation}
-            errorNodesForRotation={errorNodesForRotation}
-            isRotating={isRotating}
-            connectionSourceId={connectionSourceId}
-            dynamicLevel={dynamicLevel}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onCanvasClick={handleCanvasClick}
-            onNodeMouseDown={handleNodeMouseDown}
-            onNodeClick={handleNodeClick}
-            onEdgeClick={deleteEdge}
-          />
-
-          <aside className="w-80 bg-ponto-dark border-l border-ponto-muted/50 p-6 shadow-xl z-10 flex flex-col gap-6 overflow-y-auto">
-            {appMode === "sandbox" ? (
-              <SandboxSidebar
-                nodes={nodes}
-                edges={edges}
-                isDirected={isDirected}
-                customNodeId={customNodeId}
-                setCustomNodeId={setCustomNodeId}
-                selectedAlgo={selectedAlgo}
-                setSelectedAlgo={setSelectedAlgo}
-                startNodeId={startNodeId}
-                setStartNodeId={setStartNodeId}
-                targetNodeId={targetNodeId}
-                setTargetNodeId={setTargetNodeId}
-                flowSourceId={flowSourceId}
-                setFlowSourceId={setFlowSourceId}
-                flowSinkId={flowSinkId}
-                setFlowSinkId={setFlowSinkId}
-                isAnimating={isAnimating}
-                runAlgorithmSandbox={runAlgorithmSandbox}
-                selectedNodesForRotation={selectedNodesForRotation}
-                setSelectedNodesForRotation={setSelectedNodesForRotation}
-                setErrorNodesForRotation={setErrorNodesForRotation}
-                errorMessage={errorMessage}
-                setErrorMessage={setErrorMessage}
-                handleManualRotation={handleManualRotation}
-                mstTotalWeight={mstTotalWeight}
-              />
-            ) : (
-              <GameSidebar
-                levelConfigs={LEVEL_CONFIGS}
-                currentLevelIndex={currentLevelIndex}
-                dynamicLevel={dynamicLevel}
-                lives={lives}
-                gameStatus={gameStatus}
-                playerPath={playerPath}
-                loadLevel={loadLevel}
-                resetGame={resetGame}
-                nextLevel={nextLevel}
-                handleRotationGameChallenge={handleRotationGameChallenge}
-              />
-            )}
-          </aside>
+        <div className="flex gap-3">
+          <div
+            className="w-3 h-3 bg-ponto-accent rounded-full animate-bounce"
+            style={{ animationDelay: "0ms" }}
+          ></div>
+          <div
+            className="w-3 h-3 bg-ponto-accent rounded-full animate-bounce"
+            style={{ animationDelay: "150ms" }}
+          ></div>
+          <div
+            className="w-3 h-3 bg-ponto-accent rounded-full animate-bounce"
+            style={{ animationDelay: "300ms" }}
+          ></div>
         </div>
+        <p className="text-ponto-accent mt-4 font-mono text-sm tracking-widest uppercase">
+          Carregando Visualizador...
+        </p>
       </div>
     );
-  };
+  }
+
+  // --- RENDERIZAÇÃO PRINCIPAL ---
+  return (
+    <div className="flex h-screen flex-col bg-[#f8fafc] text-slate-900 font-sans">
+      <Header
+        appMode={appMode}
+        setAppMode={setAppMode}
+        activeTool={activeTool}
+        setActiveTool={setActiveTool}
+        isDirected={isDirected}
+        setIsDirected={setIsDirected}
+        clearAll={clearAll}
+        loadLevel={loadLevel}
+        setEdges={setEdges}
+      />
+
+      <div className="flex flex-1 overflow-hidden relative">
+        <GraphCanvas
+          appMode={appMode}
+          activeTool={activeTool}
+          nodes={nodes}
+          edges={edges}
+          isDirected={isDirected}
+          visitedNodes={visitedNodes}
+          queueNodes={queueNodes}
+          visitedEdges={visitedEdges}
+          selectedNodesForRotation={selectedNodesForRotation}
+          errorNodesForRotation={errorNodesForRotation}
+          isRotating={isRotating}
+          connectionSourceId={connectionSourceId}
+          dynamicLevel={dynamicLevel}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onCanvasClick={handleCanvasClick}
+          onNodeMouseDown={handleNodeMouseDown}
+          onNodeClick={handleNodeClick}
+          onEdgeClick={deleteEdge}
+        />
+
+        <aside className="w-80 bg-ponto-dark border-l border-ponto-muted/50 p-6 shadow-xl z-10 flex flex-col gap-6 overflow-y-auto">
+          {appMode === "sandbox" ? (
+            <SandboxSidebar
+              nodes={nodes}
+              edges={edges}
+              isDirected={isDirected}
+              customNodeId={customNodeId}
+              setCustomNodeId={setCustomNodeId}
+              selectedAlgo={selectedAlgo}
+              setSelectedAlgo={setSelectedAlgo}
+              startNodeId={startNodeId}
+              setStartNodeId={setStartNodeId}
+              targetNodeId={targetNodeId}
+              setTargetNodeId={setTargetNodeId}
+              flowSourceId={flowSourceId}
+              setFlowSourceId={setFlowSourceId}
+              flowSinkId={flowSinkId}
+              setFlowSinkId={setFlowSinkId}
+              isAnimating={isAnimating}
+              runAlgorithmSandbox={runAlgorithmSandbox}
+              selectedNodesForRotation={selectedNodesForRotation}
+              setSelectedNodesForRotation={setSelectedNodesForRotation}
+              setErrorNodesForRotation={setErrorNodesForRotation}
+              errorMessage={errorMessage}
+              setErrorMessage={setErrorMessage}
+              handleManualRotation={handleManualRotation}
+              mstTotalWeight={mstTotalWeight}
+              dijkstraDistances={dijkstraDistances}
+              dijkstraPrevious={dijkstraPrevious}
+            />
+          ) : (
+            <GameSidebar
+              levelConfigs={LEVEL_CONFIGS}
+              currentLevelIndex={currentLevelIndex}
+              dynamicLevel={dynamicLevel}
+              lives={lives}
+              gameStatus={gameStatus}
+              playerPath={playerPath}
+              loadLevel={loadLevel}
+              resetGame={resetGame}
+              nextLevel={nextLevel}
+              handleRotationGameChallenge={handleRotationGameChallenge}
+            />
+          )}
+        </aside>
+      </div>
+    </div>
+  );
+};
 
 export default App;
