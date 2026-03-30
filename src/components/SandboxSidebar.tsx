@@ -70,6 +70,8 @@ interface SandboxSidebarProps {
   mstTotalWeight: number;
   dijkstraDistances: Record<number, number>;
   dijkstraPrevious: Record<number, number | null>;
+  dfsTD: Record<number, number>;
+  dfsTT: Record<number, number>;
 }
 
 export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
@@ -99,6 +101,8 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   mstTotalWeight,
   dijkstraDistances,
   dijkstraPrevious,
+  dfsTD,
+  dfsTT,
 }) => {
   const [selectedModule, setSelectedModule] = useState<string>("busca");
 
@@ -362,6 +366,54 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                 </div>
               </div>
             )}
+          {selectedAlgo === "DFS" && Object.keys(dfsTD).length > 0 && (
+            <div className="border-t border-ponto-muted/30 pt-4">
+              <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
+                Tempos da Busca (DFS)
+              </h2>
+              <div className="bg-ponto-darker rounded-lg border border-ponto-muted p-2 shadow-inner overflow-hidden">
+                <table className="w-full text-xs text-left text-slate-300">
+                  <thead className="bg-ponto-dark text-ponto-accent border-b border-ponto-muted/50">
+                    <tr>
+                      <th className="p-2 font-bold">Vértice</th>
+                      <th className="p-2 font-bold text-[#3aebb9]">
+                        Descoberta (TD)
+                      </th>
+                      <th className="p-2 font-bold text-purple-400">
+                        Término (TT)
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nodes.map((node) => {
+                      const td = dfsTD[node.id];
+                      const tt = dfsTT[node.id];
+
+                      const tdDisplay = td === undefined ? "-" : td;
+                      const ttDisplay = tt === undefined ? "-" : tt;
+
+                      return (
+                        <tr
+                          key={node.id}
+                          className="border-b border-ponto-muted/20 last:border-0 hover:bg-ponto-muted/10 transition-colors"
+                        >
+                          <td className="p-2 font-bold text-white">
+                            {node.label}
+                          </td>
+                          <td className="p-2 font-mono text-[#3aebb9]">
+                            {tdDisplay}
+                          </td>
+                          <td className="p-2 font-mono text-purple-400">
+                            {ttDisplay}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -122,7 +122,7 @@ const generateDynamicLevel = (algo: string) => {
     const targetNodeId = numNodes - 1;
     const steps = generateDijkstraSteps(startNodeId, numNodes, edges);
     const lastStep = steps[steps.length - 1];
-const path = getShortestPath(startNodeId, targetNodeId, lastStep.previous!);
+    const path = getShortestPath(startNodeId, targetNodeId, lastStep.previous!);
     return { nodes, edges, expectedVisits: path, startNodeId, targetNodeId };
   }
 
@@ -225,6 +225,8 @@ function App() {
   const [dijkstraPrevious, setDijkstraPrevious] = useState<
     Record<number, number | null>
   >({});
+  const [dfsTD, setDfsTD] = useState<Record<number, number>>({});
+  const [dfsTT, setDfsTT] = useState<Record<number, number>>({});
   const [isRotating] = useState(false);
   const rotationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedNodesForRotation, setSelectedNodesForRotation] = useState<
@@ -259,6 +261,8 @@ function App() {
     setVisitedEdges(new Set());
     setMstTotalWeight(0);
     setDijkstraDistances({});
+    setDfsTD({});
+    setDfsTT({});
   };
 
   const loadLevel = (index: number) => {
@@ -681,6 +685,9 @@ function App() {
       if (step.distancesState) setDijkstraDistances(step.distancesState);
       if (step.previousState) setDijkstraPrevious(step.previousState);
 
+      if (step.tdState) setDfsTD(step.tdState);
+      if (step.ttState) setDfsTT(step.ttState);
+
       if (step.type === "queue" && step.nodeId !== undefined) {
         setQueueNodes((prev) => new Set(prev).add(step.nodeId));
       } else if (step.type === "visit" && step.nodeId !== undefined) {
@@ -721,6 +728,10 @@ function App() {
     setSelectedNodesForRotation([]);
     setErrorNodesForRotation([]);
     setErrorMessage("");
+    setDijkstraDistances({});
+    setDijkstraPrevious({});
+    setDfsTD({});
+    setDfsTT({});
   };
 
   // --- HANDLERS DO CANVAS ---
@@ -923,6 +934,8 @@ function App() {
               mstTotalWeight={mstTotalWeight}
               dijkstraDistances={dijkstraDistances}
               dijkstraPrevious={dijkstraPrevious}
+              dfsTD={dfsTD}
+              dfsTT={dfsTT}
             />
           ) : (
             <GameSidebar
@@ -942,6 +955,6 @@ function App() {
       </div>
     </div>
   );
-};
+}
 
 export default App;
