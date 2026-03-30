@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Play, RotateCcw } from "lucide-react";
 import type { Node, Edge } from "../types";
+import type { BsFileSpreadsheet } from "react-icons/bs";
 
 export const ALGORITHM_MODULES: Record<
   string,
@@ -72,6 +73,9 @@ interface SandboxSidebarProps {
   dijkstraPrevious: Record<number, number | null>;
   dfsTD: Record<number, number>;
   dfsTT: Record<number, number>;
+  bfsL: Record<number, number>;
+  bfsNivel: Record<number, number>;
+  bfsPai: Record<number, number | null>;
 }
 
 export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
@@ -103,6 +107,9 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   dijkstraPrevious,
   dfsTD,
   dfsTT,
+  bfsL,
+  bfsNivel,
+  bfsPai,
 }) => {
   const [selectedModule, setSelectedModule] = useState<string>("busca");
 
@@ -405,6 +412,57 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                           </td>
                           <td className="p-2 font-mono text-purple-400">
                             {ttDisplay}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {selectedAlgo === "BFS" && Object.keys(bfsL).length > 0 && (
+            <div className="border-t border-ponto-muted/30 pt-4">
+              <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
+                Busca em Largura (BFS)
+              </h2>
+              <div className="bg-ponto-darker rounded-lg border border-ponto-muted p-2 shadow-inner overflow-hidden">
+                <table className="w-full text-xs text-left text-slate-300">
+                  <thead className="bg-ponto-dark text-ponto-accent border-b border-ponto-muted/50">
+                    <tr>
+                      <th className="p-2 font-bold">Vértice</th>
+                      <th className="p-2 font-bold text-blue-400">L</th>
+                      <th className="p-2 font-bold text-emerald-400">Nível</th>
+                      <th className="p-2 font-bold text-yellow-300">Pai</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nodes.map((node) => {
+                      const l = bfsL[node.id];
+                      const n = bfsNivel[node.id];
+                      const p = bfsPai[node.id];
+
+                      const lDisplay = l === undefined ? "-" : l;
+                      const nDisplay = n === undefined ? "-" : n;
+                      const pDisplay =
+                        p === undefined || p === null ? "Ø" : getNodeLabel(p);
+
+                      return (
+                        <tr
+                          key={node.id}
+                          className="border-b border-ponto-muted/20 last:border-0 hover:bg-ponto-muted/10 transition-colors"
+                        >
+                          <td className="p-2 font-bold text-white">
+                            {node.label}
+                          </td>
+                          <td className="p-2 font-mono text-blue-400">
+                            {lDisplay}
+                          </td>
+                          <td className="p-2 font-mono text-emerald-400">
+                            {nDisplay}
+                          </td>
+                          <td className="p-2 font-mono text-yellow-300">
+                            {pDisplay}
                           </td>
                         </tr>
                       );

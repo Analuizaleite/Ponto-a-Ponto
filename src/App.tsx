@@ -227,6 +227,9 @@ function App() {
   >({});
   const [dfsTD, setDfsTD] = useState<Record<number, number>>({});
   const [dfsTT, setDfsTT] = useState<Record<number, number>>({});
+  const [bfsL, setBfsL] = useState<Record<number, number>>({});
+  const [bfsNivel, setBfsNivel] = useState<Record<number, number>>({});
+  const [bfsPai, setBfsPai] = useState<Record<number, number | null>>({});
   const [isRotating] = useState(false);
   const rotationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedNodesForRotation, setSelectedNodesForRotation] = useState<
@@ -672,6 +675,9 @@ function App() {
     setMstTotalWeight(0);
     setDijkstraDistances({});
     setDijkstraPrevious({});
+    setBfsL({});
+    setBfsNivel({});
+    setBfsPai({});
 
     let currentStep = 0;
     const intervalId = setInterval(() => {
@@ -687,6 +693,10 @@ function App() {
 
       if (step.tdState) setDfsTD(step.tdState);
       if (step.ttState) setDfsTT(step.ttState);
+
+      if (step.lState) setBfsL(step.lState);
+      if (step.nivelState) setBfsNivel(step.nivelState);
+      if (step.paiState) setBfsPai(step.paiState);
 
       if (step.type === "queue" && step.nodeId !== undefined) {
         setQueueNodes((prev) => new Set(prev).add(step.nodeId));
@@ -732,6 +742,9 @@ function App() {
     setDijkstraPrevious({});
     setDfsTD({});
     setDfsTT({});
+    setBfsL({});
+    setBfsNivel({});
+    setBfsPai({});
   };
 
   // --- HANDLERS DO CANVAS ---
@@ -936,6 +949,9 @@ function App() {
               dijkstraPrevious={dijkstraPrevious}
               dfsTD={dfsTD}
               dfsTT={dfsTT}
+              bfsL={bfsL}
+              bfsNivel={bfsNivel}
+              bfsPai={bfsPai}
             />
           ) : (
             <GameSidebar
