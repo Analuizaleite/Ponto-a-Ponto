@@ -38,6 +38,11 @@ export interface SandboxSidebarProps {
   bfPrevious: Record<number, number | null>;
   bfIteration: number | string;
   bfHasNegativeCycle: boolean;
+  fwDistances: Record<number, Record<number, number>>;
+  fwPrevious: Record<number, Record<number, number | null>>;
+  fwK: number | null;
+  fwI: number | null;
+  fwJ: number | null;
 }
 
 export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
@@ -76,6 +81,11 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   bfPrevious,
   bfIteration,
   bfHasNegativeCycle,
+  fwDistances,
+  fwPrevious,
+  fwK,
+  fwI,
+  fwJ,
 }) => {
   const [selectedModule, setSelectedModule] = useState<string>("buscas");
 
@@ -183,8 +193,8 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                   <option value="BELLMAN_FORD">
                     Algoritmo de Bellman-Ford
                   </option>
-                  <option value="FLOYD_WARSHALL" disabled>
-                    Floyd-Warshall (Em breve)
+                  <option value="FLOYD_WARSHALL">
+                    Algoritmo de Floyd-Warshall
                   </option>
                 </>
               )}
@@ -235,14 +245,14 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
           <div className="bg-ponto-darker rounded-lg border border-ponto-accent/40 p-4 shadow-inner relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-ponto-accent"></div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-300 font-medium">
-                Custo:
-              </span>
+              <span className="text-sm text-slate-300 font-medium">Custo:</span>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-bold text-ponto-accent">
                   {mstTotalWeight}
                 </span>
-                <span className="text-xs text-slate-500 font-mono">no total</span>
+                <span className="text-xs text-slate-500 font-mono">
+                  no total
+                </span>
               </div>
             </div>
             {mstTotalWeight > 0 && isAnimating && (
@@ -405,6 +415,86 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
           </div>
         </div>
       )}
+
+      {selectedAlgo === "FLOYD_WARSHALL" &&
+        Object.keys(fwDistances).length > 0 && (
+          <div className="border-t border-ponto-muted/30 pt-4">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider">
+                Matriz de Distâncias D
+              </h2>
+              <div className="px-2 py-1 bg-ponto-accent text-ponto-darker rounded text-[10px] font-bold">
+                {fwK !== null
+                  ? `Iteração k = ${getNodeLabel(fwK)}`
+                  : "Matriz Final"}
+              </div>
+            </div>
+
+            <div className="bg-ponto-darker rounded-lg border border-ponto-muted p-2 shadow-inner overflow-x-auto">
+              <table className="w-full text-xs text-center text-slate-300">
+                <thead className="bg-ponto-dark text-ponto-accent border-b border-ponto-muted/50">
+                  <tr>
+                    <th className="p-2 border-r border-ponto-muted/30"></th>
+                    {nodes.map((n) => (
+                      <th
+                        key={n.id}
+                        className={`p-2 font-bold ${fwK === n.id ? "bg-purple-500/20 text-purple-300" : ""}`}
+                      >
+                        {n.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {nodes.map((rowNode) => (
+                    <tr
+                      key={rowNode.id}
+                      className="border-b border-ponto-muted/20 last:border-0"
+                    >
+                      <th
+                        className={`p-2 font-bold border-r border-ponto-muted/30 text-ponto-accent bg-ponto-dark ${fwK === rowNode.id ? "bg-purple-500/20 text-purple-300" : ""}`}
+                      >
+                        {rowNode.label}
+                      </th>
+
+                      {nodes.map((colNode) => {
+                        const val = fwDistances[rowNode.id]?.[colNode.id];
+                        const valDisplay =
+                          val === Infinity || val === undefined ? "∞" : val;
+
+                        const isPivotRow = fwK === rowNode.id;
+                        const isPivotCol = fwK === colNode.id;
+                        const isPivotCross = isPivotRow || isPivotCol;
+                        const isCurrentEvaluating =
+                          fwI === rowNode.id && fwJ === colNode.id;
+
+                        let cellClass =
+                          "p-2 font-mono transition-colors duration-200 ";
+                        if (isCurrentEvaluating)
+                          cellClass +=
+                            "bg-[#f59e0b] text-[#05272d] font-bold scale-110 shadow-md rounded";
+                        else if (isPivotCross)
+                          cellClass += "bg-purple-500/10 text-purple-300";
+                        else cellClass += "text-cyan-300";
+
+                        return (
+                          <td key={colNode.id} className={cellClass}>
+                            {valDisplay}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[9px] text-slate-500 mt-2 text-center">
+              {fwI !== null && fwJ !== null && fwK !== null
+                ? `Avaliando D[${getNodeLabel(fwI)}][${getNodeLabel(fwJ)}] via k=${getNodeLabel(fwK)}`
+                : "Verificando todos os caminhos D[i][j]"}
+            </p>
+          </div>
+        )}
 
       {selectedAlgo === "BFS" && Object.keys(bfsL).length > 0 && (
         <div className="border-t border-ponto-muted/30 pt-4">

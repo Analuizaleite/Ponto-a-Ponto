@@ -21,6 +21,7 @@ import { getBalancedEdges } from "./algorithms/balancing";
 import { generatePrimSteps } from "./algorithms/prim";
 import { generateKruskalSteps } from "./algorithms/kruskal";
 import { generateBellmanFordSteps } from "./algorithms/bellmanFord";
+import { generateFloydWarshallSteps } from "./algorithms/floydWarshall";
 
 // --- CONFIGURAÇÃO DAS FASES (MODO DESAFIO) ---
 const LEVEL_CONFIGS = [
@@ -241,6 +242,11 @@ function App() {
   const [bfsL, setBfsL] = useState<Record<number, number>>({});
   const [bfsNivel, setBfsNivel] = useState<Record<number, number>>({});
   const [bfsPai, setBfsPai] = useState<Record<number, number | null>>({});
+  const [fwDistances, setFwDistances] = useState<Record<number, Record<number, number>>>({});
+  const [fwPrevious, setFwPrevious] = useState<Record<number, Record<number, number | null>>>({});
+  const [fwK, setFwK] = useState<number | null>(null);
+  const [fwI, setFwI] = useState<number | null>(null);
+  const [fwJ, setFwJ] = useState<number | null>(null);
 
   const animationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null,
@@ -693,6 +699,8 @@ function App() {
       steps = generateKruskalSteps(nodesCount, edges);
     else if (selectedAlgo === "BELLMAN_FORD")
       steps = generateBellmanFordSteps(startId, nodesCount, edges, isDirected);
+    else if (selectedAlgo === "FLOYD_WARSHALL")
+      steps = generateFloydWarshallSteps(nodesCount, edges, isDirected);
 
     setIsAnimating(true);
     setVisitedNodes(new Set());
@@ -709,6 +717,11 @@ function App() {
     setBfPrevious({});
     setBfIteration(0);
     setBfHasNegativeCycle(false);
+    setFwDistances({});
+    setFwPrevious({}); 
+    setFwK(null);
+    setFwI(null); 
+    setFwJ(null);
 
     let currentStep = 0;
 
@@ -742,6 +755,17 @@ function App() {
         if (step.hasNegativeCycle)
           alert("Aviso: O grafo contém um ciclo de peso negativo!");
       }
+
+      if (step.distancesState && selectedAlgo === "FLOYD_WARSHALL")
+        setFwDistances(step.distancesState);
+      if (step.previousState && selectedAlgo === "FLOYD_WARSHALL")
+        setFwPrevious(step.previousState);
+      if (step.k !== undefined) setFwK(step.k);
+      else if (step.type === "done" || step.type === "init") setFwK(null);
+      if (step.i !== undefined) setFwI(step.i);
+      else if (step.type === "done" || step.type === "init") setFwI(null);
+      if (step.j !== undefined) setFwJ(step.j);
+      else if (step.type === "done" || step.type === "init") setFwJ(null);
 
       if (step.type === "test-edge" && step.edge) {
         setEvaluatingEdge(step.edge);
@@ -1032,6 +1056,11 @@ function App() {
               bfPrevious={bfPrevious}
               bfIteration={bfIteration}
               bfHasNegativeCycle={bfHasNegativeCycle}
+              fwDistances={fwDistances}
+              fwPrevious={fwPrevious}
+              fwK={fwK}
+              fwI={fwI}
+              fwJ={fwJ}
             />
           ) : (
             <GameSidebar
