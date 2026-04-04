@@ -29,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="flex items-center justify-between border-b border-ponto-muted bg-ponto-darker px-6 py-3 shadow-md z-10">
       <div className="flex items-center gap-6 w-full">
-        <img src={logoImage} alt="Ponto a Ponto Logo" className="w-64 md:w-80 animate-pulse mb-8" />
+        <img src={logoImage} alt="Ponto a Ponto Logo" className="h-12 md:h-14 w-auto object-contain animate-pulse" />
         
         <div className="flex bg-ponto-dark p-1 rounded-lg border border-ponto-muted">
           <button 
