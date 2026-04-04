@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Play, RotateCcw } from "lucide-react";
+import { Play, Pause, Square, RotateCcw } from "lucide-react";
 import type { Node, Edge } from "../types";
 
 export const ALGORITHM_MODULES: Record<
@@ -50,8 +50,10 @@ export interface SandboxSidebarProps {
   setFlowSourceId: (id: string) => void;
   flowSinkId: string;
   setFlowSinkId: (id: string) => void;
-  isAnimating: boolean;
-  runAlgorithmSandbox: () => void;
+  animationStatus: "idle" | "playing" | "paused";
+  onPlay: () => void;
+  onPause: () => void;
+  onStop: () => void;
   selectedNodesForRotation: number[];
   setSelectedNodesForRotation: (nodes: number[]) => void;
   setErrorNodesForRotation: (nodes: number[]) => void;
@@ -90,8 +92,10 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   setStartNodeId,
   targetNodeId,
   setTargetNodeId,
-  isAnimating,
-  runAlgorithmSandbox,
+  animationStatus,
+  onPlay,
+  onPause,
+  onStop,
   selectedNodesForRotation,
   handleManualRotation,
   errorMessage,
@@ -114,6 +118,9 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   ffMaxFlow,
 }) => {
   const [selectedModule, setSelectedModule] = useState<string>("buscas");
+  const isRunning = animationStatus === "playing";
+  const isPaused = animationStatus === "paused";
+  const isIdle = animationStatus === "idle";
 
   const handleModuleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newModule = e.target.value;
@@ -121,6 +128,12 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
 
     const firstAlgoOfNewModule = ALGORITHM_MODULES[newModule].algos[0].id;
     setSelectedAlgo(firstAlgoOfNewModule);
+    onStop();
+  };
+
+  const handleAlgoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedAlgo(e.target.value);
+    onStop();
   };
 
   const getNodeLabel = (id: number) =>
@@ -184,7 +197,8 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
             <select
               value={selectedModule}
               onChange={handleModuleChange}
-              className="w-full bg-ponto-darker text-sm text-slate-200 border border-ponto-muted/50 rounded-md p-2 focus:outline-none focus:border-ponto-accent transition-colors"
+              disabled={!isIdle}
+              className="w-full bg-ponto-darker text-sm text-slate-200 border border-ponto-muted/50 rounded-md p-2 focus:outline-none focus:border-ponto-accent transition-colors disabled:opacity-50"
             >
               {Object.entries(ALGORITHM_MODULES).map(([key, module]) => (
                 <option key={key} value={key}>
@@ -200,8 +214,9 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
             </label>
             <select
               value={selectedAlgo}
-              onChange={(e) => setSelectedAlgo(e.target.value)}
-              className="w-full bg-ponto-darker text-sm text-slate-200 border border-ponto-muted/50 rounded-md p-2 focus:outline-none focus:border-ponto-accent transition-colors"
+              onChange={handleAlgoChange}
+              disabled={!isIdle}
+              className="w-full bg-ponto-darker text-sm text-slate-200 border border-ponto-muted/50 rounded-md p-2 focus:outline-none focus:border-ponto-accent transition-colors disabled:opacity-50"
             >
               {ALGORITHM_MODULES[selectedModule].algos.map((algo) => (
                 <option key={algo.id} value={algo.id}>
@@ -224,7 +239,8 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                   value={startNodeId}
                   onChange={(e) => setStartNodeId(e.target.value)}
                   placeholder="Ex: A"
-                  className="w-full bg-ponto-darker text-sm text-slate-200 border border-ponto-muted/50 rounded-md p-2 focus:outline-none focus:border-ponto-accent transition-colors"
+                  disabled={!isIdle}
+                  className="w-full bg-ponto-darker text-sm text-slate-200 border border-ponto-muted/50 rounded-md p-2 focus:outline-none focus:border-ponto-accent transition-colors disabled:opacity-50"
                 />
               </div>
 
@@ -238,29 +254,52 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                     value={targetNodeId}
                     onChange={(e) => setTargetNodeId(e.target.value)}
                     placeholder="Ex: F"
-                    className="w-full bg-ponto-darker text-sm text-slate-200 border border-ponto-muted/50 rounded-md p-2 focus:outline-none focus:border-ponto-accent transition-colors"
+                    disabled={!isIdle}
+                    className="w-full bg-ponto-darker text-sm text-slate-200 border border-ponto-muted/50 rounded-md p-2 focus:outline-none focus:border-ponto-accent transition-colors disabled:opacity-50"
                   />
                 </div>
               )}
             </div>
           )}
 
-          <button
-            onClick={runAlgorithmSandbox}
-            disabled={isAnimating}
-            className={`flex w-full items-center justify-center gap-2 rounded-md py-2.5 text-sm font-bold transition-all shadow-md mt-4 ${
-              isAnimating
-                ? "bg-ponto-muted cursor-not-allowed text-slate-300"
-                : "bg-ponto-accent text-ponto-darker hover:brightness-110"
-            }`}
-          >
-            {isAnimating ? (
-              <RotateCcw size={18} className="animate-spin" />
-            ) : (
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={onPlay}
+              disabled={isRunning}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-md py-2.5 text-sm font-bold transition-all shadow-md ${
+                isRunning
+                  ? "bg-ponto-muted cursor-not-allowed text-slate-300"
+                  : "bg-ponto-accent text-ponto-darker hover:brightness-110"
+              }`}
+            >
               <Play size={18} />
-            )}
-            {isAnimating ? "Rodando..." : `Animar Algoritmo`}
-          </button>
+              {isPaused ? "Continuar" : "Animar"}
+            </button>
+
+            <button
+              onClick={onPause}
+              disabled={!isRunning}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-md py-2.5 text-sm font-bold transition-all shadow-md ${
+                !isRunning
+                  ? "bg-ponto-muted cursor-not-allowed text-slate-300"
+                  : "bg-amber-500 text-amber-950 hover:brightness-110"
+              }`}
+            >
+              <Pause size={18} /> Pausar
+            </button>
+
+            <button
+              onClick={onStop}
+              disabled={isIdle}
+              className={`flex items-center justify-center px-4 py-2.5 rounded-md transition-all shadow-md ${
+                isIdle
+                  ? "bg-ponto-muted/50 text-slate-500 cursor-not-allowed"
+                  : "bg-red-500 text-white hover:bg-red-600"
+              }`}
+            >
+              <Square size={18} fill="currentColor" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -297,13 +336,13 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
             <div className="absolute top-0 left-0 w-1 h-full bg-ponto-accent"></div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-slate-300 font-medium">
-                Custo Acumulado:
+                Custo:
               </span>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-bold text-ponto-accent">
                   {mstTotalWeight}
                 </span>
-                <span className="text-xs text-slate-500 font-mono">pesos</span>
+                <span className="text-xs text-slate-500 font-mono">no total</span>
               </div>
             </div>
           </div>

@@ -218,7 +218,13 @@ function App() {
   const [flowSourceId, setFlowSourceId] = useState<string>("");
   const [flowSinkId, setFlowSinkId] = useState<string>("");
 
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [animationStatus, setAnimationStatus] = useState<
+    "idle" | "playing" | "paused"
+  >("idle");
+  const isAnimating = animationStatus === "playing";
+  const stepsRef = useRef<any[]>([]);
+  const currentStepRef = useRef<number>(0);
+
   const [visitedNodes, setVisitedNodes] = useState<Set<number>>(new Set());
   const [queueNodes, setQueueNodes] = useState<Set<number>>(new Set());
   const [visitedEdges, setVisitedEdges] = useState<Set<string>>(new Set());
@@ -262,6 +268,13 @@ function App() {
   const animationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null,
   );
+
+  const clearAnimationInterval = () => {
+    if (animationIntervalRef.current) {
+      clearInterval(animationIntervalRef.current);
+      animationIntervalRef.current = null;
+    }
+  };
 
   const rotationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedNodesForRotation, setSelectedNodesForRotation] = useState<
@@ -317,6 +330,7 @@ function App() {
   };
 
   const loadLevel = (index: number) => {
+    stopAnimation();
     setCurrentLevelIndex(index);
     const config = LEVEL_CONFIGS[index];
     const data = generateDynamicLevel(config.algo);
@@ -687,9 +701,176 @@ function App() {
     setErrorMessage("");
   };
 
+  const processAnimationStep = () => {
+    const steps = stepsRef.current;
+    if (currentStepRef.current >= steps.length) {
+      clearAnimationInterval();
+      setAnimationStatus("idle");
+      return;
+    }
+
+    const step = steps[currentStepRef.current];
+
+    if (step.distancesState && selectedAlgo === "DIJKSTRA")
+      setDijkstraDistances(step.distancesState);
+    if (step.previousState && selectedAlgo === "DIJKSTRA")
+      setDijkstraPrevious(step.previousState);
+
+    if (step.tdState) setDfsTD(step.tdState);
+    if (step.ttState) setDfsTT(step.ttState);
+
+    if (step.lState) setBfsL(step.lState);
+    if (step.nivelState) setBfsNivel(step.nivelState);
+    if (step.paiState) setBfsPai(step.paiState);
+
+    if (step.distancesState && selectedAlgo === "BELLMAN_FORD")
+      setBfDistances(step.distancesState);
+    if (step.previousState && selectedAlgo === "BELLMAN_FORD")
+      setBfPrevious(step.previousState);
+    if (step.iteration !== undefined) setBfIteration(step.iteration);
+    if (step.hasNegativeCycle !== undefined) {
+      setBfHasNegativeCycle(step.hasNegativeCycle);
+      if (step.hasNegativeCycle)
+        alert("Aviso: O grafo contém um ciclo de peso negativo!");
+    }
+
+    if (step.distancesState && selectedAlgo === "FLOYD_WARSHALL")
+      setFwDistances(step.distancesState);
+    if (step.previousState && selectedAlgo === "FLOYD_WARSHALL")
+      setFwPrevious(step.previousState);
+    if (step.k !== undefined) setFwK(step.k);
+    else if (step.type === "done" || step.type === "init") setFwK(null);
+    if (step.i !== undefined) setFwI(step.i);
+    else if (step.type === "done" || step.type === "init") setFwI(null);
+    if (step.j !== undefined) setFwJ(step.j);
+    else if (step.type === "done" || step.type === "init") setFwJ(null);
+
+    if (step.flowState && selectedAlgo === "FORD_FULKERSON")
+      setFfFlows(step.flowState);
+    if (step.maxFlow !== undefined && selectedAlgo === "FORD_FULKERSON")
+      setFfMaxFlow(step.maxFlow);
+
+    if (
+      (step.type === "find-path" || step.type === "augment") &&
+      step.pathEdges
+    ) {
+      const pathSet = new Set<string>();
+      step.pathEdges.forEach((e: Edge) => {
+        pathSet.add(
+          `${Math.min(e.sourceId, e.targetId)}-${Math.max(
+            e.sourceId,
+            e.targetId,
+          )}`,
+        );
+      });
+      setFfAugmentingEdges(pathSet);
+    } else if (step.type === "done") {
+      setFfAugmentingEdges(new Set());
+    }
+
+    if (step.type === "test-edge" && step.edge) {
+      setEvaluatingEdge(step.edge);
+    } else if (step.type === "relax" || step.type === "done") {
+      setEvaluatingEdge(null);
+    }
+
+    if (step.treeEdges) {
+      const newTree = new Set<string>();
+      step.treeEdges.forEach((e: any) => {
+        newTree.add(
+          `${Math.min(e.sourceId, e.targetId)}-${Math.max(
+            e.sourceId,
+            e.targetId,
+          )}`,
+        );
+      });
+      setVisitedEdges(newTree);
+    }
+
+    if (step.type === "queue" && step.nodeId !== undefined) {
+      setQueueNodes((prev) => new Set(prev).add(step.nodeId));
+    } else if (
+      (step.type === "visit" || step.type === "relax") &&
+      step.nodeId !== undefined
+    ) {
+      setQueueNodes((prev) => {
+        const n = new Set(prev);
+        n.delete(step.nodeId);
+        return n;
+      });
+      setVisitedNodes((prev) => new Set(prev).add(step.nodeId));
+    } else if (step.type === "edge" && step.edge !== undefined) {
+      setVisitedEdges((prev) => {
+        const n = new Set(prev);
+        const min = Math.min(step.edge.sourceId, step.edge.targetId);
+        const max = Math.max(step.edge.sourceId, step.edge.targetId);
+        n.add(`${min}-${max}`);
+        return n;
+      });
+      if (selectedAlgo === "PRIM" || selectedAlgo === "KRUSKAL") {
+        setMstTotalWeight((prev) => prev + step.edge!.weight);
+      }
+    }
+
+    currentStepRef.current += 1;
+  };
+
+  const startAnimationInterval = () => {
+    clearAnimationInterval();
+    animationIntervalRef.current = setInterval(processAnimationStep, 700);
+  };
+
+  const resetAnimationStates = () => {
+    setVisitedNodes(new Set());
+    setQueueNodes(new Set());
+    setVisitedEdges(new Set());
+    setEvaluatingEdge(null);
+    setMstTotalWeight(0);
+    setDijkstraDistances({});
+    setDijkstraPrevious({});
+    setBfsL({});
+    setBfsNivel({});
+    setBfsPai({});
+    setBfDistances({});
+    setBfPrevious({});
+    setBfIteration(0);
+    setBfHasNegativeCycle(false);
+    setFwDistances({});
+    setFwPrevious({});
+    setFwK(null);
+    setFwI(null);
+    setFwJ(null);
+    setFfFlows({});
+    setFfMaxFlow(0);
+    setFfAugmentingEdges(new Set());
+  };
+
+  const stopAnimation = () => {
+    clearAnimationInterval();
+    setAnimationStatus("idle");
+    stepsRef.current = [];
+    currentStepRef.current = 0;
+    resetAnimationStates();
+  };
+
+  const pauseAnimation = () => {
+    clearAnimationInterval();
+    if (animationStatus === "playing") setAnimationStatus("paused");
+  };
+
+  const resumeAnimation = () => {
+    if (animationStatus !== "paused" || stepsRef.current.length === 0)
+      return;
+    setAnimationStatus("playing");
+    startAnimationInterval();
+  };
+
   const runAlgorithmSandbox = () => {
-    if (animationIntervalRef.current)
-      clearInterval(animationIntervalRef.current);
+    if (animationStatus === "playing") return;
+    if (animationStatus === "paused") {
+      resumeAnimation();
+      return;
+    }
 
     let startNode, targetNode;
 
@@ -753,140 +934,20 @@ function App() {
         startId,
         targetId,
         edges,
-        isDirected
+        isDirected,
       );
 
-    setIsAnimating(true);
-    setVisitedNodes(new Set());
-    setQueueNodes(new Set());
-    setVisitedEdges(new Set());
-    setEvaluatingEdge(null);
-    setMstTotalWeight(0);
-    setDijkstraDistances({});
-    setDijkstraPrevious({});
-    setBfsL({});
-    setBfsNivel({});
-    setBfsPai({});
-    setBfDistances({});
-    setBfPrevious({});
-    setBfIteration(0);
-    setBfHasNegativeCycle(false);
-    setFwDistances({});
-    setFwPrevious({});
-    setFwK(null);
-    setFwI(null);
-    setFwJ(null);
-    setFfFlows({});
-    setFfMaxFlow(0);
-    setFfAugmentingEdges(new Set());
+    if (steps.length === 0) {
+      alert("Não há passos definidos para este algoritmo.");
+      return;
+    }
 
-    let currentStep = 0;
+    stepsRef.current = steps;
+    currentStepRef.current = 0;
 
-    animationIntervalRef.current = setInterval(() => {
-      if (currentStep >= steps.length) {
-        clearInterval(animationIntervalRef.current!);
-        setIsAnimating(false);
-        return;
-      }
-      const step = steps[currentStep];
-
-      if (step.distancesState && selectedAlgo === "DIJKSTRA")
-        setDijkstraDistances(step.distancesState);
-      if (step.previousState && selectedAlgo === "DIJKSTRA")
-        setDijkstraPrevious(step.previousState);
-
-      if (step.tdState) setDfsTD(step.tdState);
-      if (step.ttState) setDfsTT(step.ttState);
-
-      if (step.lState) setBfsL(step.lState);
-      if (step.nivelState) setBfsNivel(step.nivelState);
-      if (step.paiState) setBfsPai(step.paiState);
-
-      if (step.distancesState && selectedAlgo === "BELLMAN_FORD")
-        setBfDistances(step.distancesState);
-      if (step.previousState && selectedAlgo === "BELLMAN_FORD")
-        setBfPrevious(step.previousState);
-      if (step.iteration !== undefined) setBfIteration(step.iteration);
-      if (step.hasNegativeCycle !== undefined) {
-        setBfHasNegativeCycle(step.hasNegativeCycle);
-        if (step.hasNegativeCycle)
-          alert("Aviso: O grafo contém um ciclo de peso negativo!");
-      }
-
-      if (step.distancesState && selectedAlgo === "FLOYD_WARSHALL")
-        setFwDistances(step.distancesState);
-      if (step.previousState && selectedAlgo === "FLOYD_WARSHALL")
-        setFwPrevious(step.previousState);
-      if (step.k !== undefined) setFwK(step.k);
-      else if (step.type === "done" || step.type === "init") setFwK(null);
-      if (step.i !== undefined) setFwI(step.i);
-      else if (step.type === "done" || step.type === "init") setFwI(null);
-      if (step.j !== undefined) setFwJ(step.j);
-      else if (step.type === "done" || step.type === "init") setFwJ(null);
-
-      if (step.flowState && selectedAlgo === "FORD_FULKERSON")
-        setFfFlows(step.flowState);
-      if (step.maxFlow !== undefined && selectedAlgo === "FORD_FULKERSON")
-        setFfMaxFlow(step.maxFlow);
-
-      if (
-        (step.type === "find-path" || step.type === "augment") &&
-        step.pathEdges
-      ) {
-        const pathSet = new Set<string>();
-        step.pathEdges.forEach((e: Edge) => {
-          pathSet.add(
-            `${Math.min(e.sourceId, e.targetId)}-${Math.max(e.sourceId, e.targetId)}`,
-          );
-        });
-        setFfAugmentingEdges(pathSet);
-      } else if (step.type === "done") {
-        setFfAugmentingEdges(new Set());
-      }
-
-      if (step.type === "test-edge" && step.edge) {
-        setEvaluatingEdge(step.edge);
-      } else if (step.type === "relax" || step.type === "done") {
-        setEvaluatingEdge(null);
-      }
-
-      if (step.treeEdges) {
-        const newTree = new Set<string>();
-        step.treeEdges.forEach((e: any) => {
-          newTree.add(
-            `${Math.min(e.sourceId, e.targetId)}-${Math.max(e.sourceId, e.targetId)}`,
-          );
-        });
-        setVisitedEdges(newTree);
-      }
-
-      if (step.type === "queue" && step.nodeId !== undefined) {
-        setQueueNodes((prev) => new Set(prev).add(step.nodeId));
-      } else if (
-        (step.type === "visit" || step.type === "relax") &&
-        step.nodeId !== undefined
-      ) {
-        setQueueNodes((prev) => {
-          const n = new Set(prev);
-          n.delete(step.nodeId);
-          return n;
-        });
-        setVisitedNodes((prev) => new Set(prev).add(step.nodeId));
-      } else if (step.type === "edge" && step.edge !== undefined) {
-        setVisitedEdges((prev) => {
-          const n = new Set(prev);
-          const min = Math.min(step.edge.sourceId, step.edge.targetId);
-          const max = Math.max(step.edge.sourceId, step.edge.targetId);
-          n.add(`${min}-${max}`);
-          return n;
-        });
-        if (selectedAlgo === "PRIM" || selectedAlgo === "KRUSKAL") {
-          setMstTotalWeight((prev) => prev + step.edge!.weight);
-        }
-      }
-
-      currentStep++;
-    }, 700);
+    resetAnimationStates();
+    setAnimationStatus("playing");
+    startAnimationInterval();
   };
 
   const deleteNode = (id: number) => {
@@ -897,39 +958,13 @@ function App() {
     setEdges(edges.filter((_, i) => i !== index));
 
   const clearAll = () => {
-    if (animationIntervalRef.current)
-      clearInterval(animationIntervalRef.current);
+    stopAnimation();
 
     setNodes([]);
     setEdges([]);
-    setVisitedNodes(new Set());
-    setQueueNodes(new Set());
-    setVisitedEdges(new Set());
-    setMstTotalWeight(0);
-    setIsAnimating(false);
     setSelectedNodesForRotation([]);
     setErrorNodesForRotation([]);
     setErrorMessage("");
-    setDijkstraDistances({});
-    setDijkstraPrevious({});
-    setDfsTD({});
-    setDfsTT({});
-    setBfsL({});
-    setBfsNivel({});
-    setBfsPai({});
-    setBfDistances({});
-    setBfPrevious({});
-    setBfIteration(0);
-    setBfHasNegativeCycle(false);
-    setEvaluatingEdge(null);
-    setFwDistances({});
-    setFwPrevious({});
-    setFwK(null);
-    setFwI(null);
-    setFwJ(null);
-    setFfFlows({});
-    setFfMaxFlow(0);
-    setFfAugmentingEdges(new Set());
   };
 
   // --- HANDLERS DO CANVAS ---
@@ -1125,8 +1160,10 @@ function App() {
               setFlowSourceId={setFlowSourceId}
               flowSinkId={flowSinkId}
               setFlowSinkId={setFlowSinkId}
-              isAnimating={isAnimating}
-              runAlgorithmSandbox={runAlgorithmSandbox}
+              animationStatus={animationStatus}
+              onPlay={runAlgorithmSandbox}
+              onPause={pauseAnimation}
+              onStop={stopAnimation}
               selectedNodesForRotation={selectedNodesForRotation}
               setSelectedNodesForRotation={setSelectedNodesForRotation}
               setErrorNodesForRotation={setErrorNodesForRotation}

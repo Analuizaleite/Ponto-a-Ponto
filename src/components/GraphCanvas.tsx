@@ -126,6 +126,11 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           else if (isVisitedEdge) lineColor = "#3aebb9";
           else if (isSaturated) lineColor = "#ef4444";
 
+          const edgeTextColor =
+            isVisitedEdge || isEvaluating || isAugmentingPath || isSaturated
+              ? "#05272d"
+              : "#ffffff";
+
           return (
             <g
               key={i}
@@ -162,7 +167,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 y={midY}
                 dy=".3em"
                 textAnchor="middle"
-                className={`text-[11px] font-bold select-none pointer-events-none transition-colors duration-300 fill-[#3aebb9]`}
+                style={{ fill: edgeTextColor }}
+                className="text-[11px] font-bold select-none pointer-events-none transition-colors duration-300"
               >
                 {edgeText}
               </text>
