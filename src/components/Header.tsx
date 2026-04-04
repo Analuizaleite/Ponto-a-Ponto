@@ -1,6 +1,7 @@
 import React from 'react';
 import { Circle, MousePointer2, MoveUpRight, RotateCcw, ArrowRightLeft, ArrowRight, Eraser, Gamepad2, Wrench, Trash2 } from 'lucide-react';
 import type { AppMode, ActiveTool } from '../types';
+import logoImage from "./assets/logo_transparente.png";
 
 interface HeaderProps {
   appMode: AppMode;
@@ -28,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="flex items-center justify-between border-b border-ponto-muted bg-ponto-darker px-6 py-3 shadow-md z-10">
       <div className="flex items-center gap-6 w-full">
-        <img src="src/assets/logo_transparente.png" alt="Ponto a Ponto" className="h-16" />
+        <img src={logoImage} alt="Ponto a Ponto Logo" className="w-64 md:w-80 animate-pulse mb-8" />
         
         <div className="flex bg-ponto-dark p-1 rounded-lg border border-ponto-muted">
           <button 

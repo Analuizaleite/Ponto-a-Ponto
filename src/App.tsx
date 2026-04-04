@@ -6,6 +6,7 @@ import { Header } from "./components/Header";
 import { GraphCanvas } from "./components/GraphCanvas";
 import { SandboxSidebar } from "./components/SandboxSidebar";
 import { GameSidebar } from "./components/GameSidebar";
+import logoImage from "./assets/logo_transparente.png";
 
 // --- IMPORTAÇÃO DE ALGORITMOS ---
 import { generateBFSSteps } from "./algorithms/bfs";
@@ -221,7 +222,6 @@ function App() {
   const [animationStatus, setAnimationStatus] = useState<
     "idle" | "playing" | "paused"
   >("idle");
-  const isAnimating = animationStatus === "playing";
   const stepsRef = useRef<any[]>([]);
   const currentStepRef = useRef<number>(0);
 
@@ -859,8 +859,7 @@ function App() {
   };
 
   const resumeAnimation = () => {
-    if (animationStatus !== "paused" || stepsRef.current.length === 0)
-      return;
+    if (animationStatus !== "paused" || stepsRef.current.length === 0) return;
     setAnimationStatus("playing");
     startAnimationInterval();
   };
@@ -930,12 +929,7 @@ function App() {
     else if (selectedAlgo === "FLOYD_WARSHALL")
       steps = generateFloydWarshallSteps(nodesCount, edges, isDirected);
     else if (selectedAlgo === "FORD_FULKERSON")
-      steps = generateFordFulkersonSteps(
-        startId,
-        targetId,
-        edges,
-        isDirected,
-      );
+      steps = generateFordFulkersonSteps(startId, targetId, edges, isDirected);
 
     if (steps.length === 0) {
       alert("Não há passos definidos para este algoritmo.");
@@ -1075,7 +1069,7 @@ function App() {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-ponto-darker">
         <img
-          src="src/assets/logo_transparente.png"
+          src={logoImage}
           alt="Ponto a Ponto Logo"
           className="w-64 md:w-80 animate-pulse mb-8"
         />
@@ -1164,8 +1158,6 @@ function App() {
               onPlay={runAlgorithmSandbox}
               onPause={pauseAnimation}
               onStop={stopAnimation}
-              selectedNodesForRotation={selectedNodesForRotation}
-              setSelectedNodesForRotation={setSelectedNodesForRotation}
               setErrorNodesForRotation={setErrorNodesForRotation}
               errorMessage={errorMessage}
               setErrorMessage={setErrorMessage}

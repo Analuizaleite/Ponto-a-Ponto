@@ -41,7 +41,6 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   errorNodesForRotation,
   isRotating,
   connectionSourceId,
-  dynamicLevel,
   ffFlows,
   ffAugmentingEdges,
   selectedAlgo,
@@ -93,9 +92,6 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
           const midX = (s.x + t.x) / 2;
           const midY = (s.y + t.y) / 2;
-          const isDijkstraLevel =
-            appMode === "game" && dynamicLevel?.algo === "DIJKSTRA";
-          const showWeight = appMode === "sandbox" || isDijkstraLevel;
 
           const edgeKey = `${Math.min(s.id, t.id)}-${Math.max(s.id, t.id)}`;
           const isVisitedEdge = visitedEdges.has(edgeKey);

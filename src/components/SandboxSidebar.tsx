@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Play, Pause, Square, RotateCcw } from "lucide-react";
+import { Play, Pause, Square } from "lucide-react";
 import type { Node, Edge } from "../types";
 
 export const ALGORITHM_MODULES: Record<
@@ -54,8 +54,6 @@ export interface SandboxSidebarProps {
   onPlay: () => void;
   onPause: () => void;
   onStop: () => void;
-  selectedNodesForRotation: number[];
-  setSelectedNodesForRotation: (nodes: number[]) => void;
   setErrorNodesForRotation: (nodes: number[]) => void;
   errorMessage: string;
   setErrorMessage: (msg: string) => void;
@@ -96,7 +94,6 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   onPlay,
   onPause,
   onStop,
-  selectedNodesForRotation,
   handleManualRotation,
   errorMessage,
   mstTotalWeight,
