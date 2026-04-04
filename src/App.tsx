@@ -22,6 +22,7 @@ import { generatePrimSteps } from "./algorithms/prim";
 import { generateKruskalSteps } from "./algorithms/kruskal";
 import { generateBellmanFordSteps } from "./algorithms/bellmanFord";
 import { generateFloydWarshallSteps } from "./algorithms/floydWarshall";
+import { generateFordFulkersonSteps } from "./algorithms/fordFulkersonBFS";
 
 // --- CONFIGURAÇÃO DAS FASES (MODO DESAFIO) ---
 const LEVEL_CONFIGS = [
@@ -242,17 +243,26 @@ function App() {
   const [bfsL, setBfsL] = useState<Record<number, number>>({});
   const [bfsNivel, setBfsNivel] = useState<Record<number, number>>({});
   const [bfsPai, setBfsPai] = useState<Record<number, number | null>>({});
-  const [fwDistances, setFwDistances] = useState<Record<number, Record<number, number>>>({});
-  const [fwPrevious, setFwPrevious] = useState<Record<number, Record<number, number | null>>>({});
+  const [fwDistances, setFwDistances] = useState<
+    Record<number, Record<number, number>>
+  >({});
+  const [fwPrevious, setFwPrevious] = useState<
+    Record<number, Record<number, number | null>>
+  >({});
   const [fwK, setFwK] = useState<number | null>(null);
   const [fwI, setFwI] = useState<number | null>(null);
   const [fwJ, setFwJ] = useState<number | null>(null);
+
+  const [ffFlows, setFfFlows] = useState<Record<string, number>>({});
+  const [ffMaxFlow, setFfMaxFlow] = useState<number>(0);
+  const [ffAugmentingEdges, setFfAugmentingEdges] = useState<Set<string>>(
+    new Set(),
+  );
 
   const animationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null,
   );
 
-  const [isRotating, setIsRotating] = useState(false);
   const rotationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedNodesForRotation, setSelectedNodesForRotation] = useState<
     number[]
@@ -296,6 +306,14 @@ function App() {
     setBfIteration(0);
     setBfHasNegativeCycle(false);
     setEvaluatingEdge(null);
+    setFwDistances({});
+    setFwPrevious({});
+    setFwK(null);
+    setFwI(null);
+    setFwJ(null);
+    setFfFlows({});
+    setFfMaxFlow(0);
+    setFfAugmentingEdges(new Set());
   };
 
   const loadLevel = (index: number) => {
@@ -673,16 +691,45 @@ function App() {
     if (animationIntervalRef.current)
       clearInterval(animationIntervalRef.current);
 
-    let startNode;
+    let startNode, targetNode;
+
     if (selectedAlgo !== "KRUSKAL" && selectedAlgo !== "FLOYD_WARSHALL") {
-      startNode = nodes.find((n) => n.label === startNodeId.trim());
+      const searchStart = startNodeId.trim().toLowerCase();
+      startNode = nodes.find(
+        (n) =>
+          n.label.toLowerCase() === searchStart ||
+          n.id.toString() === searchStart,
+      );
+
       if (!startNode) {
-        alert("Nó inicial não encontrado. Verifique o nome digitado.");
+        alert("Nó inicial (Fonte) não encontrado. Verifique o nome digitado.");
         return;
+      }
+
+      if (selectedAlgo === "FORD_FULKERSON") {
+        const searchTarget = targetNodeId.trim().toLowerCase();
+        targetNode = nodes.find(
+          (n) =>
+            n.label.toLowerCase() === searchTarget ||
+            n.id.toString() === searchTarget,
+        );
+
+        if (!targetNode) {
+          alert(
+            `Nó sumidouro (destino) "${targetNodeId}" não encontrado. Verifique se o nome está correto.`,
+          );
+          return;
+        }
+
+        if (startNode.id === targetNode.id) {
+          alert("A Fonte e o Sumidouro não podem ser o mesmo nó!");
+          return;
+        }
       }
     }
 
     const startId = startNode ? startNode.id : 0;
+    const targetId = targetNode ? targetNode.id : 0;
     const nodesCount =
       nodes.length > 0 ? Math.max(...nodes.map((n) => n.id)) + 1 : 0;
 
@@ -701,6 +748,13 @@ function App() {
       steps = generateBellmanFordSteps(startId, nodesCount, edges, isDirected);
     else if (selectedAlgo === "FLOYD_WARSHALL")
       steps = generateFloydWarshallSteps(nodesCount, edges, isDirected);
+    else if (selectedAlgo === "FORD_FULKERSON")
+      steps = generateFordFulkersonSteps(
+        startId,
+        targetId,
+        edges,
+        isDirected
+      );
 
     setIsAnimating(true);
     setVisitedNodes(new Set());
@@ -718,10 +772,13 @@ function App() {
     setBfIteration(0);
     setBfHasNegativeCycle(false);
     setFwDistances({});
-    setFwPrevious({}); 
+    setFwPrevious({});
     setFwK(null);
-    setFwI(null); 
+    setFwI(null);
     setFwJ(null);
+    setFfFlows({});
+    setFfMaxFlow(0);
+    setFfAugmentingEdges(new Set());
 
     let currentStep = 0;
 
@@ -767,6 +824,26 @@ function App() {
       if (step.j !== undefined) setFwJ(step.j);
       else if (step.type === "done" || step.type === "init") setFwJ(null);
 
+      if (step.flowState && selectedAlgo === "FORD_FULKERSON")
+        setFfFlows(step.flowState);
+      if (step.maxFlow !== undefined && selectedAlgo === "FORD_FULKERSON")
+        setFfMaxFlow(step.maxFlow);
+
+      if (
+        (step.type === "find-path" || step.type === "augment") &&
+        step.pathEdges
+      ) {
+        const pathSet = new Set<string>();
+        step.pathEdges.forEach((e: Edge) => {
+          pathSet.add(
+            `${Math.min(e.sourceId, e.targetId)}-${Math.max(e.sourceId, e.targetId)}`,
+          );
+        });
+        setFfAugmentingEdges(pathSet);
+      } else if (step.type === "done") {
+        setFfAugmentingEdges(new Set());
+      }
+
       if (step.type === "test-edge" && step.edge) {
         setEvaluatingEdge(step.edge);
       } else if (step.type === "relax" || step.type === "done") {
@@ -807,6 +884,7 @@ function App() {
           setMstTotalWeight((prev) => prev + step.edge!.weight);
         }
       }
+
       currentStep++;
     }, 700);
   };
@@ -844,6 +922,14 @@ function App() {
     setBfIteration(0);
     setBfHasNegativeCycle(false);
     setEvaluatingEdge(null);
+    setFwDistances({});
+    setFwPrevious({});
+    setFwK(null);
+    setFwI(null);
+    setFwJ(null);
+    setFfFlows({});
+    setFfMaxFlow(0);
+    setFfAugmentingEdges(new Set());
   };
 
   // --- HANDLERS DO CANVAS ---
@@ -1006,7 +1092,6 @@ function App() {
           visitedEdges={visitedEdges}
           selectedNodesForRotation={selectedNodesForRotation}
           errorNodesForRotation={errorNodesForRotation}
-          isRotating={isRotating}
           connectionSourceId={connectionSourceId}
           dynamicLevel={dynamicLevel}
           onMouseMove={handleMouseMove}
@@ -1016,6 +1101,10 @@ function App() {
           onNodeClick={handleNodeClick}
           onEdgeClick={deleteEdge}
           evaluatingEdge={evaluatingEdge}
+          ffFlows={ffFlows}
+          ffAugmentingEdges={ffAugmentingEdges}
+          selectedAlgo={selectedAlgo}
+          isRotating={false}
         />
 
         <aside className="w-80 bg-ponto-dark border-l border-ponto-muted/50 p-6 shadow-xl z-10 flex flex-col gap-6 overflow-y-auto">
@@ -1061,6 +1150,7 @@ function App() {
               fwK={fwK}
               fwI={fwI}
               fwJ={fwJ}
+              ffMaxFlow={ffMaxFlow}
             />
           ) : (
             <GameSidebar

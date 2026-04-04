@@ -13,9 +13,12 @@ interface GraphCanvasProps {
   evaluatingEdge?: Edge | null;
   selectedNodesForRotation: number[];
   errorNodesForRotation: number[];
-  isRotating: boolean;
+  isRotating?: boolean;
   connectionSourceId: number | null;
   dynamicLevel: any;
+  ffFlows?: Record<string, number>;
+  ffAugmentingEdges?: Set<string>;
+  selectedAlgo?: string;
   onMouseMove: (e: React.MouseEvent<SVGSVGElement>) => void;
   onMouseUp: () => void;
   onCanvasClick: (e: React.MouseEvent<SVGSVGElement>) => void;
@@ -39,6 +42,9 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   isRotating,
   connectionSourceId,
   dynamicLevel,
+  ffFlows,
+  ffAugmentingEdges,
+  selectedAlgo,
   onMouseMove,
   onMouseUp,
   onCanvasClick,
@@ -102,6 +108,24 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 evaluatingEdge.sourceId === edge.targetId &&
                 evaluatingEdge.targetId === edge.sourceId));
 
+          const isAugmentingPath =
+            ffAugmentingEdges?.has(edgeKey) &&
+            selectedAlgo === "FORD_FULKERSON";
+
+          let edgeText = edge.weight.toString();
+          let isSaturated = false;
+          if (selectedAlgo === "FORD_FULKERSON" && ffFlows) {
+            const flow = ffFlows[`${edge.sourceId}-${edge.targetId}`] || 0;
+            edgeText = `${flow}/${edge.weight}`;
+            if (flow === edge.weight) isSaturated = true;
+          }
+
+          let lineColor = "#05262f";
+          if (isEvaluating) lineColor = "#f59e0b";
+          else if (isAugmentingPath) lineColor = "#0ea5e9";
+          else if (isVisitedEdge) lineColor = "#3aebb9";
+          else if (isSaturated) lineColor = "#ef4444";
+
           return (
             <g
               key={i}
@@ -117,41 +141,20 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 y1={s.y}
                 x2={t.x}
                 y2={t.y}
-                stroke="transparent"
-                strokeWidth="20"
-              />
-
-              <line
-                x1={s.x}
-                y1={s.y}
-                x2={t.x}
-                y2={t.y}
-                stroke={
-                  isEvaluating
-                    ? "#f59e0b"
-                    : isVisitedEdge
-                      ? "#3aebb9"
-                      : "#2c6455"
-                }
+                stroke={lineColor}
                 strokeWidth="3"
                 markerEnd={isDirected ? "url(#arrowhead)" : undefined}
-                className={`transition-all duration-300 ease-in-out ${isVisitedEdge || isEvaluating ? "opacity-100" : "opacity-60"} ${isEvaluating ? "drop-shadow-[0_0_12px_rgba(245,158,11,1)] z-50" : isVisitedEdge ? "drop-shadow-[0_0_8px_rgba(58,235,185,0.8)]" : ""}`}
+                className={`transition-all duration-300 ease-in-out ${isVisitedEdge || isEvaluating || isAugmentingPath ? "opacity-100" : "opacity-60"} ${isEvaluating ? "drop-shadow-[0_0_12px_rgba(245,158,11,1)] z-50" : isAugmentingPath ? "drop-shadow-[0_0_12px_rgba(14,165,233,1)] z-40" : isVisitedEdge ? "drop-shadow-[0_0_8px_rgba(58,235,185,0.8)]" : ""}`}
               />
 
               <rect
-                x={midX - 12}
+                x={selectedAlgo === "FORD_FULKERSON" ? midX - 20 : midX - 12}
                 y={midY - 12}
-                width="24"
+                width={selectedAlgo === "FORD_FULKERSON" ? "40" : "24"}
                 height="24"
                 rx="4"
-                fill={
-                  isEvaluating
-                    ? "#f59e0b"
-                    : isVisitedEdge
-                      ? "#3aebb9"
-                      : "#05272d"
-                }
-                className="transition-colors duration-300 stroke-[#3aebb9] stroke-1"
+                fill={lineColor}
+                className="transition-colors duration-300 stroke-[#05272d] stroke-1"
               />
 
               <text
@@ -159,9 +162,9 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 y={midY}
                 dy=".3em"
                 textAnchor="middle"
-                className={`text-[11px] font-bold select-none pointer-events-none transition-colors duration-300 ${isVisitedEdge || isEvaluating ? "fill-[#05272d]" : "fill-[#3aebb9]"}`}
+                className={`text-[11px] font-bold select-none pointer-events-none transition-colors duration-300 fill-[#3aebb9]`}
               >
-                {edge.weight}
+                {edgeText}
               </text>
             </g>
           );
