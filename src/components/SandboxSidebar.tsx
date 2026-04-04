@@ -1,67 +1,25 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Play, RotateCcw } from "lucide-react";
 import type { Node, Edge } from "../types";
-import type { BsFileSpreadsheet } from "react-icons/bs";
 
-export const ALGORITHM_MODULES: Record<
-  string,
-  { title: string; algos: { id: string; name: string }[] }
-> = {
-  busca: {
-    title: "Buscas",
-    algos: [
-      { id: "BFS", name: "Busca em Largura (BFS)" },
-      { id: "DFS", name: "Busca em Profundidade (DFS)" },
-    ],
-  },
-  arvore: {
-    title: "Árvores Geradoras",
-    algos: [
-      { id: "PRIM", name: "Algoritmo de Prim" },
-      { id: "KRUSKAL", name: "Algoritmo de Kruskal" },
-    ],
-  },
-  caminho: {
-    title: "Caminhos Mínimos",
-    algos: [
-      { id: "DIJKSTRA", name: "Dijkstra" },
-      { id: "BELLMAN_FORD", name: "Bellman-Ford" },
-      { id: "FLOYD_WARSHALL", name: "Floyd-Warshall" },
-    ],
-  },
-  fluxo: {
-    title: "Fluxo em Redes",
-    algos: [
-      { id: "FORD_FULKERSON", name: "Ford-Fulkerson" },
-      { id: "EDMONDS_KARP", name: "Edmonds-Karp" },
-      { id: "DINIC", name: "Dinic" },
-    ],
-  },
-};
-
-interface SandboxSidebarProps {
+export interface SandboxSidebarProps {
   nodes: Node[];
   edges: Edge[];
   isDirected: boolean;
-
   customNodeId: string;
   setCustomNodeId: (id: string) => void;
-
   selectedAlgo: string;
   setSelectedAlgo: (algo: string) => void;
   startNodeId: string;
   setStartNodeId: (id: string) => void;
-
-  targetNodeId?: string;
-  setTargetNodeId?: (id: string) => void;
-  flowSourceId?: string;
-  setFlowSourceId?: (id: string) => void;
-  flowSinkId?: string;
-  setFlowSinkId?: (id: string) => void;
-
+  targetNodeId: string;
+  setTargetNodeId: (id: string) => void;
+  flowSourceId: string;
+  setFlowSourceId: (id: string) => void;
+  flowSinkId: string;
+  setFlowSinkId: (id: string) => void;
   isAnimating: boolean;
   runAlgorithmSandbox: () => void;
-
   selectedNodesForRotation: number[];
   setSelectedNodesForRotation: (nodes: number[]) => void;
   setErrorNodesForRotation: (nodes: number[]) => void;
@@ -76,6 +34,10 @@ interface SandboxSidebarProps {
   bfsL: Record<number, number>;
   bfsNivel: Record<number, number>;
   bfsPai: Record<number, number | null>;
+  bfDistances: Record<number, number>;
+  bfPrevious: Record<number, number | null>;
+  bfIteration: number | string;
+  bfHasNegativeCycle: boolean;
 }
 
 export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
@@ -88,12 +50,12 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   setSelectedAlgo,
   startNodeId,
   setStartNodeId,
-  targetNodeId = "",
-  setTargetNodeId = () => {},
-  flowSourceId = "",
-  setFlowSourceId = () => {},
-  flowSinkId = "",
-  setFlowSinkId = () => {},
+  targetNodeId,
+  setTargetNodeId,
+  flowSourceId,
+  setFlowSourceId,
+  flowSinkId,
+  setFlowSinkId,
   isAnimating,
   runAlgorithmSandbox,
   selectedNodesForRotation,
@@ -110,21 +72,27 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   bfsL,
   bfsNivel,
   bfsPai,
+  bfDistances,
+  bfPrevious,
+  bfIteration,
+  bfHasNegativeCycle,
 }) => {
-  const [selectedModule, setSelectedModule] = useState<string>("busca");
+  const [selectedModule, setSelectedModule] = useState<string>("buscas");
 
-  useEffect(() => {
-    const firstAlgoOfModule = ALGORITHM_MODULES[selectedModule].algos[0].id;
-    setSelectedAlgo(firstAlgoOfModule);
-  }, [selectedModule, setSelectedAlgo]);
+  const handleModuleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newModule = e.target.value;
+    setSelectedModule(newModule);
+
+    if (newModule === "buscas") setSelectedAlgo("BFS");
+    else if (newModule === "caminhos") setSelectedAlgo("DIJKSTRA");
+    else if (newModule === "arvores") setSelectedAlgo("PRIM");
+    else if (newModule === "fluxos") setSelectedAlgo("FORD_FULKERSON");
+  };
 
   const getNodeLabel = (id: number) =>
     nodes.find((n) => n.id === id)?.label || id.toString();
 
   const renderAdjacencyList = () => {
-    const getNodeLabel = (id: number) =>
-      nodes.find((n) => n.id === id)?.label || id;
-
     return nodes.map((node) => {
       const neighbors = edges
         .filter((e) => e.sourceId === node.id)
@@ -148,139 +116,101 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6 w-full pb-10">
       <div>
-        <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-4">
-          Criar Nó
+        <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-2">
+          Criar Nó (Opcional)
         </h2>
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="ID do nó (vazio para auto)"
-              value={customNodeId}
-              onChange={(e) => setCustomNodeId(e.target.value)}
-              className="w-full rounded-md border border-ponto-muted bg-ponto-darker text-white px-3 py-2 text-sm focus:border-ponto-accent focus:outline-none placeholder-slate-500"
-            />
-          </div>
-          {customNodeId !== "" && (
-            <p className="text-xs text-slate-400">
-              O próximo nó terá ID = {customNodeId}
-            </p>
-          )}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-slate-400">
+            Nome/Letra do próximo nó:
+          </label>
+          <input
+            type="text"
+            value={customNodeId}
+            onChange={(e) => setCustomNodeId(e.target.value)}
+            placeholder="Ex: A, Paris, R1"
+            className="w-full bg-ponto-darker text-sm text-slate-200 border border-ponto-muted/50 rounded-md p-2 focus:outline-none focus:border-ponto-accent transition-colors"
+          />
+          <p className="text-[10px] text-slate-500 italic">
+            Deixe em branco para usar números automáticos.
+          </p>
         </div>
       </div>
 
-      <div>
+      <div className="border-t border-ponto-muted/30 pt-4">
         <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-4">
           Executar Algoritmo
         </h2>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs text-slate-400 mb-1 block">
-              Área de Estudo:
+
+        <div className="space-y-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400">
+              1. Escolha o Módulo:
             </label>
             <select
               value={selectedModule}
-              onChange={(e) => setSelectedModule(e.target.value)}
-              className="w-full rounded-md border border-ponto-muted bg-ponto-darker text-white px-3 py-2 text-sm focus:border-ponto-accent focus:outline-none"
+              onChange={handleModuleChange}
+              className="w-full bg-ponto-darker text-sm text-slate-200 border border-ponto-muted/50 rounded-md p-2 focus:outline-none focus:border-ponto-accent transition-colors"
             >
-              {Object.entries(ALGORITHM_MODULES).map(([key, module]) => (
-                <option key={key} value={key}>
-                  {module.title}
-                </option>
-              ))}
+              <option value="buscas">Buscas em Grafos</option>
+              <option value="caminhos">Caminhos Mínimos</option>
+              <option value="arvores">Árvores Geradoras Mínimas</option>
+              <option value="fluxos" disabled>
+                Fluxo em Redes (Em breve)
+              </option>
             </select>
           </div>
 
-          <div>
-            <label className="text-xs text-slate-400 mb-1 block">
-              Algoritmo:
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400">
+              2. Escolha o Algoritmo:
             </label>
             <select
               value={selectedAlgo}
               onChange={(e) => setSelectedAlgo(e.target.value)}
-              className="w-full rounded-md border border-ponto-muted bg-ponto-dark text-white px-3 py-2 text-sm focus:border-ponto-accent focus:outline-none"
+              className="w-full bg-ponto-darker text-sm text-slate-200 border border-ponto-muted/50 rounded-md p-2 focus:outline-none focus:border-ponto-accent transition-colors"
             >
-              {ALGORITHM_MODULES[selectedModule].algos.map((algo) => (
-                <option key={algo.id} value={algo.id}>
-                  {algo.name}
-                </option>
-              ))}
+              {selectedModule === "buscas" && (
+                <>
+                  <option value="BFS">Busca em Largura (BFS)</option>
+                  <option value="DFS">Busca em Profundidade (DFS)</option>
+                </>
+              )}
+              {selectedModule === "caminhos" && (
+                <>
+                  <option value="DIJKSTRA">Algoritmo de Dijkstra</option>
+                  <option value="BELLMAN_FORD">
+                    Algoritmo de Bellman-Ford
+                  </option>
+                  <option value="FLOYD_WARSHALL" disabled>
+                    Floyd-Warshall (Em breve)
+                  </option>
+                </>
+              )}
+              {selectedModule === "arvores" && (
+                <>
+                  <option value="PRIM">Algoritmo de Prim</option>
+                  <option value="KRUSKAL">Algoritmo de Kruskal</option>
+                </>
+              )}
             </select>
           </div>
 
-          <div className="bg-ponto-dark p-3 rounded-lg border border-ponto-muted/50 space-y-2 mt-2 shadow-inner">
-            {(selectedModule === "busca" ||
-              (selectedModule === "caminho" &&
-                selectedAlgo !== "FLOYD_WARSHALL") ||
-              selectedAlgo === "PRIM") && (
-              <div className="flex gap-2 items-center justify-between">
-                <span className="text-xs text-slate-400 font-medium">
-                  Nó Inicial:
-                </span>
-                <input
-                  type="text"
-                  placeholder="Ex: 0"
-                  value={startNodeId}
-                  onChange={(e) => setStartNodeId(e.target.value)}
-                  className="w-24 rounded border border-ponto-muted bg-ponto-darker text-white px-2 py-1 text-sm text-center focus:border-ponto-accent focus:outline-none"
-                />
-              </div>
-            )}
-
-            {selectedModule === "caminho" &&
-              selectedAlgo !== "FLOYD_WARSHALL" && (
-                <div className="flex gap-2 items-center justify-between">
-                  <span className="text-xs text-slate-400 font-medium">
-                    Nó Destino:
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="(Opcional)"
-                    value={targetNodeId}
-                    onChange={(e) => setTargetNodeId(e.target.value)}
-                    className="w-24 rounded border border-ponto-muted bg-ponto-darker text-white px-2 py-1 text-sm text-center focus:border-ponto-accent focus:outline-none"
-                  />
-                </div>
-              )}
-
-            {selectedModule === "fluxo" && (
-              <>
-                <div className="flex gap-2 items-center justify-between">
-                  <span className="text-xs text-slate-400 font-medium">
-                    Fonte (S):
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Ex: 0"
-                    value={flowSourceId}
-                    onChange={(e) => setFlowSourceId(e.target.value)}
-                    className="w-24 rounded border border-ponto-muted bg-ponto-darker text-white px-2 py-1 text-sm text-center focus:border-ponto-accent focus:outline-none"
-                  />
-                </div>
-                <div className="flex gap-2 items-center justify-between">
-                  <span className="text-xs text-slate-400 font-medium">
-                    Sorvedouro (T):
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Ex: 5"
-                    value={flowSinkId}
-                    onChange={(e) => setFlowSinkId(e.target.value)}
-                    className="w-24 rounded border border-ponto-muted bg-ponto-darker text-white px-2 py-1 text-sm text-center focus:border-ponto-accent focus:outline-none"
-                  />
-                </div>
-              </>
-            )}
-
-            {(selectedAlgo === "KRUSKAL" ||
-              selectedAlgo === "FLOYD_WARSHALL") && (
-              <p className="text-xs text-slate-500 text-center italic py-1">
-                Este algoritmo processa todo o grafo automaticamente.
-              </p>
-            )}
-          </div>
+          {selectedAlgo !== "KRUSKAL" && selectedAlgo !== "FLOYD_WARSHALL" && (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-slate-400">
+                Nó Inicial (Nome/ID):
+              </label>
+              <input
+                type="text"
+                value={startNodeId}
+                onChange={(e) => setStartNodeId(e.target.value)}
+                placeholder="Ex: A"
+                className="w-full bg-ponto-darker text-sm text-slate-200 border border-ponto-muted/50 rounded-md p-2 focus:outline-none focus:border-ponto-accent transition-colors"
+              />
+            </div>
+          )}
 
           <button
             onClick={runAlgorithmSandbox}
@@ -294,186 +224,236 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
             )}
             {isAnimating ? "Rodando..." : `Animar Algoritmo`}
           </button>
-
-          {(selectedAlgo === "PRIM" || selectedAlgo === "KRUSKAL") && (
-            <div className="border-t border-ponto-muted/30 pt-4">
-              <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
-                Resultados da AGM
-              </h2>
-              <div className="bg-ponto-darker rounded-lg border border-ponto-accent/40 p-4 shadow-inner relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-ponto-accent"></div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-300 font-medium">
-                    Custo:
-                  </span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold text-ponto-accent">
-                      {mstTotalWeight}
-                    </span>
-                    <span className="text-xs text-slate-500 font-mono">
-                      no total
-                    </span>
-                  </div>
-                </div>
-                {mstTotalWeight > 0 && isAnimating && (
-                  <p className="text-[10px] text-slate-400 mt-2 italic text-right animate-pulse">
-                    Somando aresta...
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {selectedAlgo === "DIJKSTRA" &&
-            Object.keys(dijkstraDistances).length > 0 && (
-              <div className="border-t border-ponto-muted/30 pt-4">
-                <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
-                  Tabela de Distâncias (Dijkstra)
-                </h2>
-                <div className="bg-ponto-darker rounded-lg border border-ponto-muted p-2 shadow-inner overflow-hidden">
-                  <table className="w-full text-xs text-left text-slate-300">
-                    <thead className="bg-ponto-dark text-ponto-accent border-b border-ponto-muted/50">
-                      <tr>
-                        <th className="p-2 font-bold">Vértice</th>
-                        <th className="p-2 font-bold text-cyan-300">d[v]</th>
-                        <th className="p-2 font-bold text-yellow-300">
-                          pred[v]
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {nodes.map((node) => {
-                        const d = dijkstraDistances[node.id];
-                        const p = dijkstraPrevious[node.id];
-
-                        const dDisplay =
-                          d === Infinity || d === undefined ? "∞" : d;
-                        const pDisplay =
-                          p === null || p === undefined ? "-" : getNodeLabel(p);
-
-                        return (
-                          <tr
-                            key={node.id}
-                            className="border-b border-ponto-muted/20 last:border-0 hover:bg-ponto-muted/10 transition-colors"
-                          >
-                            <td className="p-2 font-bold text-white">
-                              {node.label}
-                            </td>
-                            <td className="p-2 font-mono text-cyan-300">
-                              {dDisplay}
-                            </td>
-                            <td className="p-2 font-mono text-yellow-300">
-                              {pDisplay}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          {selectedAlgo === "DFS" && Object.keys(dfsTD).length > 0 && (
-            <div className="border-t border-ponto-muted/30 pt-4">
-              <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
-                Tempos da Busca (DFS)
-              </h2>
-              <div className="bg-ponto-darker rounded-lg border border-ponto-muted p-2 shadow-inner overflow-hidden">
-                <table className="w-full text-xs text-left text-slate-300">
-                  <thead className="bg-ponto-dark text-ponto-accent border-b border-ponto-muted/50">
-                    <tr>
-                      <th className="p-2 font-bold">Vértice</th>
-                      <th className="p-2 font-bold text-[#3aebb9]">
-                        Descoberta (TD)
-                      </th>
-                      <th className="p-2 font-bold text-purple-400">
-                        Término (TT)
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {nodes.map((node) => {
-                      const td = dfsTD[node.id];
-                      const tt = dfsTT[node.id];
-
-                      const tdDisplay = td === undefined ? "-" : td;
-                      const ttDisplay = tt === undefined ? "-" : tt;
-
-                      return (
-                        <tr
-                          key={node.id}
-                          className="border-b border-ponto-muted/20 last:border-0 hover:bg-ponto-muted/10 transition-colors"
-                        >
-                          <td className="p-2 font-bold text-white">
-                            {node.label}
-                          </td>
-                          <td className="p-2 font-mono text-[#3aebb9]">
-                            {tdDisplay}
-                          </td>
-                          <td className="p-2 font-mono text-purple-400">
-                            {ttDisplay}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-          {selectedAlgo === "BFS" && Object.keys(bfsL).length > 0 && (
-            <div className="border-t border-ponto-muted/30 pt-4">
-              <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
-                Busca em Largura (BFS)
-              </h2>
-              <div className="bg-ponto-darker rounded-lg border border-ponto-muted p-2 shadow-inner overflow-hidden">
-                <table className="w-full text-xs text-left text-slate-300">
-                  <thead className="bg-ponto-dark text-ponto-accent border-b border-ponto-muted/50">
-                    <tr>
-                      <th className="p-2 font-bold">Vértice</th>
-                      <th className="p-2 font-bold text-blue-400">L</th>
-                      <th className="p-2 font-bold text-emerald-400">Nível</th>
-                      <th className="p-2 font-bold text-yellow-300">Pai</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {nodes.map((node) => {
-                      const l = bfsL[node.id];
-                      const n = bfsNivel[node.id];
-                      const p = bfsPai[node.id];
-
-                      const lDisplay = l === undefined ? "-" : l;
-                      const nDisplay = n === undefined ? "-" : n;
-                      const pDisplay =
-                        p === undefined || p === null ? "Ø" : getNodeLabel(p);
-
-                      return (
-                        <tr
-                          key={node.id}
-                          className="border-b border-ponto-muted/20 last:border-0 hover:bg-ponto-muted/10 transition-colors"
-                        >
-                          <td className="p-2 font-bold text-white">
-                            {node.label}
-                          </td>
-                          <td className="p-2 font-mono text-blue-400">
-                            {lDisplay}
-                          </td>
-                          <td className="p-2 font-mono text-emerald-400">
-                            {nDisplay}
-                          </td>
-                          <td className="p-2 font-mono text-yellow-300">
-                            {pDisplay}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {(selectedAlgo === "PRIM" || selectedAlgo === "KRUSKAL") && (
+        <div className="border-t border-ponto-muted/30 pt-4">
+          <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
+            Resultados da AGM
+          </h2>
+          <div className="bg-ponto-darker rounded-lg border border-ponto-accent/40 p-4 shadow-inner relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-ponto-accent"></div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-300 font-medium">
+                Custo:
+              </span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold text-ponto-accent">
+                  {mstTotalWeight}
+                </span>
+                <span className="text-xs text-slate-500 font-mono">no total</span>
+              </div>
+            </div>
+            {mstTotalWeight > 0 && isAnimating && (
+              <p className="text-[10px] text-slate-400 mt-2 italic text-right animate-pulse">
+                Somando aresta...
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {selectedAlgo === "DIJKSTRA" &&
+        Object.keys(dijkstraDistances).length > 0 && (
+          <div className="border-t border-ponto-muted/30 pt-4">
+            <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
+              Tabela de Distâncias (Dijkstra)
+            </h2>
+            <div className="bg-ponto-darker rounded-lg border border-ponto-muted p-2 shadow-inner overflow-hidden">
+              <table className="w-full text-xs text-left text-slate-300">
+                <thead className="bg-ponto-dark text-ponto-accent border-b border-ponto-muted/50">
+                  <tr>
+                    <th className="p-2 font-bold">Vértice</th>
+                    <th className="p-2 font-bold text-cyan-300">d[v]</th>
+                    <th className="p-2 font-bold text-yellow-300">pred[v]</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {nodes.map((node) => {
+                    const d = dijkstraDistances[node.id];
+                    const p = dijkstraPrevious[node.id];
+                    const dDisplay =
+                      d === Infinity || d === undefined ? "∞" : d;
+                    const pDisplay =
+                      p === null || p === undefined ? "-" : getNodeLabel(p);
+
+                    return (
+                      <tr
+                        key={node.id}
+                        className="border-b border-ponto-muted/20 last:border-0 hover:bg-ponto-muted/10 transition-colors"
+                      >
+                        <td className="p-2 font-bold text-white">
+                          {node.label}
+                        </td>
+                        <td className="p-2 font-mono text-cyan-300">
+                          {dDisplay}
+                        </td>
+                        <td className="p-2 font-mono text-yellow-300">
+                          {pDisplay}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+      {selectedAlgo === "BELLMAN_FORD" &&
+        Object.keys(bfDistances).length > 0 && (
+          <div className="border-t border-ponto-muted/30 pt-4">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider">
+                Matriz Bellman-Ford
+              </h2>
+              <div
+                className={`px-2 py-1 rounded text-[10px] font-bold ${bfHasNegativeCycle ? "bg-red-500 text-white" : "bg-ponto-accent text-ponto-darker"}`}
+              >
+                {bfHasNegativeCycle
+                  ? "CICLO NEGATIVO!"
+                  : `Fase: ${bfIteration}`}
+              </div>
+            </div>
+            <div className="bg-ponto-darker rounded-lg border border-ponto-muted p-2 shadow-inner overflow-hidden">
+              <table className="w-full text-xs text-left text-slate-300">
+                <thead className="bg-ponto-dark text-ponto-accent border-b border-ponto-muted/50">
+                  <tr>
+                    <th className="p-2 font-bold">Vértice</th>
+                    <th className="p-2 font-bold text-cyan-300">d[v]</th>
+                    <th className="p-2 font-bold text-yellow-300">pred[v]</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {nodes.map((node) => {
+                    const d = bfDistances[node.id];
+                    const p = bfPrevious[node.id];
+                    const dDisplay =
+                      d === Infinity || d === undefined ? "∞" : d;
+                    const pDisplay =
+                      p === null || p === undefined ? "-" : getNodeLabel(p);
+
+                    return (
+                      <tr
+                        key={node.id}
+                        className="border-b border-ponto-muted/20 last:border-0 hover:bg-ponto-muted/10 transition-colors"
+                      >
+                        <td className="p-2 font-bold text-white">
+                          {node.label}
+                        </td>
+                        <td className="p-2 font-mono text-cyan-300">
+                          {dDisplay}
+                        </td>
+                        <td className="p-2 font-mono text-yellow-300">
+                          {pDisplay}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[9px] text-slate-500 mt-2 text-center">
+              Relaxando todas as arestas |V|-1 vezes.
+            </p>
+          </div>
+        )}
+
+      {selectedAlgo === "DFS" && Object.keys(dfsTD).length > 0 && (
+        <div className="border-t border-ponto-muted/30 pt-4">
+          <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
+            Tempos da Busca (DFS)
+          </h2>
+          <div className="bg-ponto-darker rounded-lg border border-ponto-muted p-2 shadow-inner overflow-hidden">
+            <table className="w-full text-xs text-left text-slate-300">
+              <thead className="bg-ponto-dark text-ponto-accent border-b border-ponto-muted/50">
+                <tr>
+                  <th className="p-2 font-bold">Vértice</th>
+                  <th className="p-2 font-bold text-[#3aebb9]">
+                    Descoberta (TD)
+                  </th>
+                  <th className="p-2 font-bold text-purple-400">
+                    Término (TT)
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {nodes.map((node) => {
+                  const td = dfsTD[node.id];
+                  const tt = dfsTT[node.id];
+                  const tdDisplay = td === undefined ? "-" : td;
+                  const ttDisplay = tt === undefined ? "-" : tt;
+
+                  return (
+                    <tr
+                      key={node.id}
+                      className="border-b border-ponto-muted/20 last:border-0 hover:bg-ponto-muted/10 transition-colors"
+                    >
+                      <td className="p-2 font-bold text-white">{node.label}</td>
+                      <td className="p-2 font-mono text-[#3aebb9]">
+                        {tdDisplay}
+                      </td>
+                      <td className="p-2 font-mono text-purple-400">
+                        {ttDisplay}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {selectedAlgo === "BFS" && Object.keys(bfsL).length > 0 && (
+        <div className="border-t border-ponto-muted/30 pt-4">
+          <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
+            Busca em Largura (BFS)
+          </h2>
+          <div className="bg-ponto-darker rounded-lg border border-ponto-muted p-2 shadow-inner overflow-hidden">
+            <table className="w-full text-xs text-left text-slate-300">
+              <thead className="bg-ponto-dark text-ponto-accent border-b border-ponto-muted/50">
+                <tr>
+                  <th className="p-2 font-bold">Vértice</th>
+                  <th className="p-2 font-bold text-blue-400">L</th>
+                  <th className="p-2 font-bold text-emerald-400">Nível</th>
+                  <th className="p-2 font-bold text-yellow-300">Pai</th>
+                </tr>
+              </thead>
+              <tbody>
+                {nodes.map((node) => {
+                  const l = bfsL[node.id];
+                  const n = bfsNivel[node.id];
+                  const p = bfsPai[node.id];
+                  const lDisplay = l === undefined ? "-" : l;
+                  const nDisplay = n === undefined ? "-" : n;
+                  const pDisplay =
+                    p === undefined || p === null ? "Ø" : getNodeLabel(p);
+
+                  return (
+                    <tr
+                      key={node.id}
+                      className="border-b border-ponto-muted/20 last:border-0 hover:bg-ponto-muted/10 transition-colors"
+                    >
+                      <td className="p-2 font-bold text-white">{node.label}</td>
+                      <td className="p-2 font-mono text-blue-400">
+                        {lDisplay}
+                      </td>
+                      <td className="p-2 font-mono text-emerald-400">
+                        {nDisplay}
+                      </td>
+                      <td className="p-2 font-mono text-yellow-300">
+                        {pDisplay}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="border-t border-ponto-muted/30 pt-4">
         <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-4">
@@ -481,77 +461,55 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
         </h2>
         <div className="space-y-3">
           <p className="text-xs text-slate-400">
-            {selectedNodesForRotation.length === 0
-              ? "Selecione a ferramenta de rotação (ícone) e clique em 3 nós"
-              : selectedNodesForRotation.length < 3
-                ? `Nós selecionados: ${selectedNodesForRotation.length}/3`
-                : "3 nós selecionados! Escolha a rotação:"}
+            Use a ferramenta de seleção para escolher{" "}
+            <span className="text-ponto-accent font-bold">3 nós</span> e aplique
+            a rotação:
           </p>
-
-          {errorMessage && (
-            <div className="bg-red-500/20 border border-red-500 text-red-300 text-xs p-3 rounded-lg mb-3 animate-pulse">
-              <span className="font-bold">❌ Erro:</span> {errorMessage}
-            </div>
-          )}
-
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => handleManualRotation("LL")}
-              disabled={selectedNodesForRotation.length !== 3}
-              className={`flex flex-col items-center gap-1 p-3 rounded-lg border-b-4 transition-all active:border-b-0 active:translate-y-1 ${selectedNodesForRotation.length !== 3 ? "bg-ponto-muted/30 border-slate-900 text-slate-500 cursor-not-allowed" : "bg-ponto-dark hover:bg-ponto-muted border-slate-900 text-white"}`}
+              className="bg-ponto-darker hover:bg-ponto-muted text-white border border-ponto-muted/50 rounded p-2 text-xs font-bold transition-colors"
             >
-              <RotateCcw size={20} />
-              <span className="text-[10px] font-bold">LL (Dir.)</span>
+              LL (Dir)
             </button>
             <button
               onClick={() => handleManualRotation("RR")}
-              disabled={selectedNodesForRotation.length !== 3}
-              className={`flex flex-col items-center gap-1 p-3 rounded-lg border-b-4 transition-all active:border-b-0 active:translate-y-1 ${selectedNodesForRotation.length !== 3 ? "bg-ponto-muted/30 border-slate-900 text-slate-500 cursor-not-allowed" : "bg-ponto-dark hover:bg-ponto-muted border-slate-900 text-white"}`}
+              className="bg-ponto-darker hover:bg-ponto-muted text-white border border-ponto-muted/50 rounded p-2 text-xs font-bold transition-colors"
             >
-              <RotateCcw size={20} className="scale-x-[-1]" />
-              <span className="text-[10px] font-bold">RR (Esq.)</span>
+              RR (Esq)
             </button>
             <button
               onClick={() => handleManualRotation("LR")}
-              disabled={selectedNodesForRotation.length !== 3}
-              className={`flex flex-col items-center gap-1 p-3 rounded-lg border-b-4 transition-all active:border-b-0 active:translate-y-1 ${selectedNodesForRotation.length !== 3 ? "bg-ponto-muted/30 border-slate-900 text-slate-500 cursor-not-allowed" : "bg-ponto-dark hover:bg-ponto-muted border-slate-900 text-white"}`}
+              className="bg-ponto-darker hover:bg-ponto-muted text-white border border-ponto-muted/50 rounded p-2 text-xs font-bold transition-colors"
             >
-              <RotateCcw size={20} />
-              <span className="text-[10px] font-bold">LR (Esq.-Dir.)</span>
+              LR (Esq-Dir)
             </button>
             <button
               onClick={() => handleManualRotation("RL")}
-              disabled={selectedNodesForRotation.length !== 3}
-              className={`flex flex-col items-center gap-1 p-3 rounded-lg border-b-4 transition-all active:border-b-0 active:translate-y-1 ${selectedNodesForRotation.length !== 3 ? "bg-ponto-muted/30 border-slate-900 text-slate-500 cursor-not-allowed" : "bg-ponto-dark hover:bg-ponto-muted border-slate-900 text-white"}`}
+              className="bg-ponto-darker hover:bg-ponto-muted text-white border border-ponto-muted/50 rounded p-2 text-xs font-bold transition-colors"
             >
-              <RotateCcw size={20} className="scale-x-[-1]" />
-              <span className="text-[10px] font-bold">RL (Dir.-Esq.)</span>
+              RL (Dir-Esq)
             </button>
           </div>
-          {selectedNodesForRotation.length > 0 && (
-            <button
-              onClick={() => {
-                setSelectedNodesForRotation([]);
-                setErrorNodesForRotation([]);
-                setErrorMessage("");
-              }}
-              className="w-full text-xs text-slate-400 hover:text-white py-1"
-            >
-              Limpar seleção ({selectedNodesForRotation.join(", ")})
-            </button>
+          {errorMessage && (
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 text-xs p-2 rounded mt-2">
+              {errorMessage}
+            </div>
           )}
         </div>
       </div>
 
       <div className="border-t border-ponto-muted/30 pt-4">
-        <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-2">
+        <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
           Lista de Adjacência
         </h2>
-        <div className="bg-ponto-darker rounded-lg border border-ponto-muted p-3 h-48 overflow-y-auto font-mono text-xs shadow-inner">
+        <div className="bg-ponto-darker rounded-lg p-3 max-h-48 overflow-y-auto border border-ponto-muted/30 custom-scrollbar">
           {nodes.length === 0 ? (
-            <span className="text-slate-500 italic">Grafo vazio</span>
+            <p className="text-xs text-slate-500 italic text-center py-2">
+              O grafo está vazio.
+            </p>
           ) : (
-            renderAdjacencyList()
+            <div className="space-y-1">{renderAdjacencyList()}</div>
           )}
         </div>
       </div>

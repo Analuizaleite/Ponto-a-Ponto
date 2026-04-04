@@ -10,6 +10,7 @@ interface GraphCanvasProps {
   visitedNodes: Set<number>;
   queueNodes: Set<number>;
   visitedEdges: Set<string>;
+  evaluatingEdge?: Edge | null;
   selectedNodesForRotation: number[];
   errorNodesForRotation: number[];
   isRotating: boolean;
@@ -32,6 +33,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   visitedNodes,
   queueNodes,
   visitedEdges,
+  evaluatingEdge,
   selectedNodesForRotation,
   errorNodesForRotation,
   isRotating,
@@ -92,6 +94,14 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           const edgeKey = `${Math.min(s.id, t.id)}-${Math.max(s.id, t.id)}`;
           const isVisitedEdge = visitedEdges.has(edgeKey);
 
+          const isEvaluating =
+            evaluatingEdge &&
+            ((evaluatingEdge.sourceId === edge.sourceId &&
+              evaluatingEdge.targetId === edge.targetId) ||
+              (!isDirected &&
+                evaluatingEdge.sourceId === edge.targetId &&
+                evaluatingEdge.targetId === edge.sourceId));
+
           return (
             <g
               key={i}
@@ -108,7 +118,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 x2={t.x}
                 y2={t.y}
                 stroke="transparent"
-                strokeWidth="15"
+                strokeWidth="20"
               />
 
               <line
@@ -116,34 +126,43 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 y1={s.y}
                 x2={t.x}
                 y2={t.y}
-                stroke={isVisitedEdge ? "#3aebb9" : "#2c6455"}
-                strokeWidth={isVisitedEdge ? "5" : "3"}
+                stroke={
+                  isEvaluating
+                    ? "#f59e0b"
+                    : isVisitedEdge
+                      ? "#3aebb9"
+                      : "#2c6455"
+                }
+                strokeWidth="3"
                 markerEnd={isDirected ? "url(#arrowhead)" : undefined}
-                className={`transition-all duration-300 ease-in-out opacity-60 ${appMode === "sandbox" && activeTool === "delete" ? "group-hover:stroke-red-500 opacity-100" : ""} ${isVisitedEdge ? "opacity-100 drop-shadow-[0_0_8px_rgba(58,235,185,0.8)]" : ""}`}
+                className={`transition-all duration-300 ease-in-out ${isVisitedEdge || isEvaluating ? "opacity-100" : "opacity-60"} ${isEvaluating ? "drop-shadow-[0_0_12px_rgba(245,158,11,1)] z-50" : isVisitedEdge ? "drop-shadow-[0_0_8px_rgba(58,235,185,0.8)]" : ""}`}
               />
 
-              {showWeight && (
-                <rect
-                  x={midX - 10}
-                  y={midY - 10}
-                  width="20"
-                  height="20"
-                  rx="4"
-                  fill={isVisitedEdge ? "#3aebb9" : "#05272d"}
-                  className={`transition-colors duration-300 stroke-[#3aebb9] stroke-1`}
-                />
-              )}
-              {showWeight && (
-                <text
-                  x={midX}
-                  y={midY}
-                  dy=".3em"
-                  textAnchor="middle"
-                  className={`text-[10px] font-bold select-none pointer-events-none transition-colors duration-300 ${isVisitedEdge ? "fill-[#05272d]" : "fill-[#3aebb9]"}`}
-                >
-                  {edge.weight}
-                </text>
-              )}
+              <rect
+                x={midX - 12}
+                y={midY - 12}
+                width="24"
+                height="24"
+                rx="4"
+                fill={
+                  isEvaluating
+                    ? "#f59e0b"
+                    : isVisitedEdge
+                      ? "#3aebb9"
+                      : "#05272d"
+                }
+                className="transition-colors duration-300 stroke-[#3aebb9] stroke-1"
+              />
+
+              <text
+                x={midX}
+                y={midY}
+                dy=".3em"
+                textAnchor="middle"
+                className={`text-[11px] font-bold select-none pointer-events-none transition-colors duration-300 ${isVisitedEdge || isEvaluating ? "fill-[#05272d]" : "fill-[#3aebb9]"}`}
+              >
+                {edge.weight}
+              </text>
             </g>
           );
         })}

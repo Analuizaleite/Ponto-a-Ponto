@@ -20,6 +20,7 @@ import {
 import { getBalancedEdges } from "./algorithms/balancing";
 import { generatePrimSteps } from "./algorithms/prim";
 import { generateKruskalSteps } from "./algorithms/kruskal";
+import { generateBellmanFordSteps } from "./algorithms/bellmanFord";
 
 // --- CONFIGURAÇÃO DAS FASES (MODO DESAFIO) ---
 const LEVEL_CONFIGS = [
@@ -214,23 +215,38 @@ function App() {
   const [targetNodeId, setTargetNodeId] = useState<string>("");
   const [flowSourceId, setFlowSourceId] = useState<string>("");
   const [flowSinkId, setFlowSinkId] = useState<string>("");
+
   const [isAnimating, setIsAnimating] = useState(false);
   const [visitedNodes, setVisitedNodes] = useState<Set<number>>(new Set());
   const [queueNodes, setQueueNodes] = useState<Set<number>>(new Set());
   const [visitedEdges, setVisitedEdges] = useState<Set<string>>(new Set());
+  const [evaluatingEdge, setEvaluatingEdge] = useState<Edge | null>(null);
+
   const [mstTotalWeight, setMstTotalWeight] = useState<number>(0);
+
   const [dijkstraDistances, setDijkstraDistances] = useState<
     Record<number, number>
   >({});
   const [dijkstraPrevious, setDijkstraPrevious] = useState<
     Record<number, number | null>
   >({});
+  const [bfDistances, setBfDistances] = useState<Record<number, number>>({});
+  const [bfPrevious, setBfPrevious] = useState<Record<number, number | null>>(
+    {},
+  );
+  const [bfIteration, setBfIteration] = useState<number | string>(0);
+  const [bfHasNegativeCycle, setBfHasNegativeCycle] = useState<boolean>(false);
   const [dfsTD, setDfsTD] = useState<Record<number, number>>({});
   const [dfsTT, setDfsTT] = useState<Record<number, number>>({});
   const [bfsL, setBfsL] = useState<Record<number, number>>({});
   const [bfsNivel, setBfsNivel] = useState<Record<number, number>>({});
   const [bfsPai, setBfsPai] = useState<Record<number, number | null>>({});
-  const [isRotating] = useState(false);
+
+  const animationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
+
+  const [isRotating, setIsRotating] = useState(false);
   const rotationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedNodesForRotation, setSelectedNodesForRotation] = useState<
     number[]
@@ -248,6 +264,8 @@ function App() {
   useEffect(() => {
     return () => {
       if (rotationTimeoutRef.current) clearTimeout(rotationTimeoutRef.current);
+      if (animationIntervalRef.current)
+        clearInterval(animationIntervalRef.current);
     };
   }, []);
 
@@ -264,8 +282,14 @@ function App() {
     setVisitedEdges(new Set());
     setMstTotalWeight(0);
     setDijkstraDistances({});
+    setDijkstraPrevious({});
     setDfsTD({});
     setDfsTT({});
+    setBfDistances({});
+    setBfPrevious({});
+    setBfIteration(0);
+    setBfHasNegativeCycle(false);
+    setEvaluatingEdge(null);
   };
 
   const loadLevel = (index: number) => {
@@ -640,6 +664,9 @@ function App() {
   };
 
   const runAlgorithmSandbox = () => {
+    if (animationIntervalRef.current)
+      clearInterval(animationIntervalRef.current);
+
     let startNode;
     if (selectedAlgo !== "KRUSKAL" && selectedAlgo !== "FLOYD_WARSHALL") {
       startNode = nodes.find((n) => n.label === startNodeId.trim());
@@ -664,32 +691,39 @@ function App() {
       steps = generatePrimSteps(startId, nodesCount, edges);
     else if (selectedAlgo === "KRUSKAL")
       steps = generateKruskalSteps(nodesCount, edges);
+    else if (selectedAlgo === "BELLMAN_FORD")
+      steps = generateBellmanFordSteps(startId, nodesCount, edges, isDirected);
 
     setIsAnimating(true);
     setVisitedNodes(new Set());
     setQueueNodes(new Set());
     setVisitedEdges(new Set());
-    setMstTotalWeight(0);
-    setDijkstraDistances({});
-    setDijkstraPrevious({});
+    setEvaluatingEdge(null);
     setMstTotalWeight(0);
     setDijkstraDistances({});
     setDijkstraPrevious({});
     setBfsL({});
     setBfsNivel({});
     setBfsPai({});
+    setBfDistances({});
+    setBfPrevious({});
+    setBfIteration(0);
+    setBfHasNegativeCycle(false);
 
     let currentStep = 0;
-    const intervalId = setInterval(() => {
+
+    animationIntervalRef.current = setInterval(() => {
       if (currentStep >= steps.length) {
-        clearInterval(intervalId);
+        clearInterval(animationIntervalRef.current!);
         setIsAnimating(false);
         return;
       }
       const step = steps[currentStep];
 
-      if (step.distancesState) setDijkstraDistances(step.distancesState);
-      if (step.previousState) setDijkstraPrevious(step.previousState);
+      if (step.distancesState && selectedAlgo === "DIJKSTRA")
+        setDijkstraDistances(step.distancesState);
+      if (step.previousState && selectedAlgo === "DIJKSTRA")
+        setDijkstraPrevious(step.previousState);
 
       if (step.tdState) setDfsTD(step.tdState);
       if (step.ttState) setDfsTT(step.ttState);
@@ -698,9 +732,39 @@ function App() {
       if (step.nivelState) setBfsNivel(step.nivelState);
       if (step.paiState) setBfsPai(step.paiState);
 
+      if (step.distancesState && selectedAlgo === "BELLMAN_FORD")
+        setBfDistances(step.distancesState);
+      if (step.previousState && selectedAlgo === "BELLMAN_FORD")
+        setBfPrevious(step.previousState);
+      if (step.iteration !== undefined) setBfIteration(step.iteration);
+      if (step.hasNegativeCycle !== undefined) {
+        setBfHasNegativeCycle(step.hasNegativeCycle);
+        if (step.hasNegativeCycle)
+          alert("Aviso: O grafo contém um ciclo de peso negativo!");
+      }
+
+      if (step.type === "test-edge" && step.edge) {
+        setEvaluatingEdge(step.edge);
+      } else if (step.type === "relax" || step.type === "done") {
+        setEvaluatingEdge(null);
+      }
+
+      if (step.treeEdges) {
+        const newTree = new Set<string>();
+        step.treeEdges.forEach((e: any) => {
+          newTree.add(
+            `${Math.min(e.sourceId, e.targetId)}-${Math.max(e.sourceId, e.targetId)}`,
+          );
+        });
+        setVisitedEdges(newTree);
+      }
+
       if (step.type === "queue" && step.nodeId !== undefined) {
         setQueueNodes((prev) => new Set(prev).add(step.nodeId));
-      } else if (step.type === "visit" && step.nodeId !== undefined) {
+      } else if (
+        (step.type === "visit" || step.type === "relax") &&
+        step.nodeId !== undefined
+      ) {
         setQueueNodes((prev) => {
           const n = new Set(prev);
           n.delete(step.nodeId);
@@ -715,7 +779,9 @@ function App() {
           n.add(`${min}-${max}`);
           return n;
         });
-        setMstTotalWeight((prev) => prev + step.edge!.weight);
+        if (selectedAlgo === "PRIM" || selectedAlgo === "KRUSKAL") {
+          setMstTotalWeight((prev) => prev + step.edge!.weight);
+        }
       }
       currentStep++;
     }, 700);
@@ -727,7 +793,11 @@ function App() {
   };
   const deleteEdge = (index: number) =>
     setEdges(edges.filter((_, i) => i !== index));
+
   const clearAll = () => {
+    if (animationIntervalRef.current)
+      clearInterval(animationIntervalRef.current);
+
     setNodes([]);
     setEdges([]);
     setVisitedNodes(new Set());
@@ -745,6 +815,11 @@ function App() {
     setBfsL({});
     setBfsNivel({});
     setBfsPai({});
+    setBfDistances({});
+    setBfPrevious({});
+    setBfIteration(0);
+    setBfHasNegativeCycle(false);
+    setEvaluatingEdge(null);
   };
 
   // --- HANDLERS DO CANVAS ---
@@ -786,7 +861,7 @@ function App() {
         customLabel !== "" ? customLabel : newInternalId.toString();
 
       if (customLabel !== "" && nodes.some((n) => n.label === customLabel)) {
-        alert("Esta nó já existe no grafo. Escolha outro nome.");
+        alert("Este nó já existe no grafo. Escolha outro nome.");
         return;
       }
 
@@ -916,6 +991,7 @@ function App() {
           onNodeMouseDown={handleNodeMouseDown}
           onNodeClick={handleNodeClick}
           onEdgeClick={deleteEdge}
+          evaluatingEdge={evaluatingEdge}
         />
 
         <aside className="w-80 bg-ponto-dark border-l border-ponto-muted/50 p-6 shadow-xl z-10 flex flex-col gap-6 overflow-y-auto">
@@ -952,6 +1028,10 @@ function App() {
               bfsL={bfsL}
               bfsNivel={bfsNivel}
               bfsPai={bfsPai}
+              bfDistances={bfDistances}
+              bfPrevious={bfPrevious}
+              bfIteration={bfIteration}
+              bfHasNegativeCycle={bfHasNegativeCycle}
             />
           ) : (
             <GameSidebar
