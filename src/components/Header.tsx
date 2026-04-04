@@ -1,7 +1,7 @@
 import React from 'react';
 import { Circle, MousePointer2, MoveUpRight, RotateCcw, ArrowRightLeft, ArrowRight, Eraser, Gamepad2, Wrench, Trash2 } from 'lucide-react';
 import type { AppMode, ActiveTool } from '../types';
-import logoImage from "./assets/logo_transparente.png";
+import logoImage from "../assets/logo_transparente.png";
 
 interface HeaderProps {
   appMode: AppMode;
