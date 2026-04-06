@@ -16,11 +16,20 @@ interface GraphCanvasProps {
   isRotating?: boolean;
   connectionSourceId: number | null;
   dynamicLevel: any;
+  themeId?: string | null;
   ffFlows?: Record<string, number>;
   ffAugmentingEdges?: Set<string>;
   selectedAlgo?: string;
-  onMouseMove: (e: React.MouseEvent<SVGSVGElement>) => void;
-  onMouseUp: () => void;
+
+  transform: { x: number; y: number; k: number };
+  onCanvasMouseDown: (e: React.MouseEvent | React.TouchEvent) => void;
+  onCanvasMouseMove: (e: React.MouseEvent | React.TouchEvent) => void;
+  onCanvasMouseUp: () => void;
+  onCanvasWheel: (e: React.WheelEvent) => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetZoom: () => void;
+
   onCanvasClick: (e: React.MouseEvent<SVGSVGElement>) => void;
   onNodeMouseDown: (e: React.MouseEvent, nodeId: number) => void;
   onNodeClick: (e: React.MouseEvent, nodeId: number) => void;
@@ -41,36 +50,98 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   errorNodesForRotation,
   isRotating,
   connectionSourceId,
+  dynamicLevel,
+  themeId,
   ffFlows,
   ffAugmentingEdges,
   selectedAlgo,
-  onMouseMove,
-  onMouseUp,
+  transform,
+  onCanvasMouseDown,
+  onCanvasMouseMove,
+  onCanvasMouseUp,
+  onCanvasWheel,
+  zoomIn,
+  zoomOut,
+  resetZoom,
   onCanvasClick,
   onNodeMouseDown,
   onNodeClick,
   onEdgeClick,
 }) => {
-  const getNode = (id: number) => nodes.find((n) => n.id === id);
+  const getLudicNodeVisuals = (nodeId: number) => {
+    if (appMode !== "game" || !themeId) {
+      return {
+        icon: null,
+        bgClass: "fill-slate-700",
+        borderClass: "stroke-ponto-accent",
+      };
+    }
+
+    const isStart = dynamicLevel?.startNodeId === nodeId;
+    const isTarget = dynamicLevel?.targetNodeId === nodeId;
+
+    if (themeId === "logistica")
+      return {
+        icon: isStart ? "🚑" : isTarget ? "🏥" : "🚦",
+        bgClass: "fill-slate-800",
+        borderClass: "stroke-slate-500",
+      };
+    if (themeId === "buscas")
+      return {
+        icon: isStart ? "💻" : isTarget ? "🕷️" : "🖥️",
+        bgClass: "fill-[#0a192f]",
+        borderClass: "stroke-green-400",
+      };
+    if (themeId === "infra")
+      return {
+        icon: isStart ? "⚡" : "🏭",
+        bgClass: "fill-amber-950",
+        borderClass: "stroke-amber-500",
+      };
+    if (themeId === "crises")
+      return {
+        icon: isStart ? "🚰" : isTarget ? "🏙️" : "💧",
+        bgClass: "fill-cyan-950",
+        borderClass: "stroke-cyan-500",
+      };
+
+    if (themeId === "arvores")
+      return {
+        icon: "🍎",
+        bgClass: "fill-emerald-500",
+        borderClass: "stroke-white",
+      };
+
+    return {
+      icon: null,
+      bgClass: "fill-slate-700",
+      borderClass: "stroke-ponto-accent",
+    };
+  };
+
+  const getBaseEdgeStyle = () => {
+    if (appMode !== "game" || !themeId) return { color: "#2c6455", width: "3" };
+    if (themeId === "logistica") return { color: "#64748b", width: "6" };
+    if (themeId === "buscas") return { color: "#0f766e", width: "3" };
+    if (themeId === "infra") return { color: "#b45309", width: "4" };
+    if (themeId === "crises") return { color: "#0369a1", width: "6" };
+    if (themeId === "arvores") return { color: "#10b981", width: "3" };
+    return { color: "#2c6455", width: "3" };
+  };
 
   return (
-    <main className="flex-1 bg-slate-50 relative">
+    <div className="relative w-full h-full overflow-hidden bg-slate-50">
       <svg
-        className={`w-full h-full ${
-          appMode === "game"
-            ? "cursor-default"
-            : activeTool === "add-node"
-              ? "cursor-crosshair"
-              : activeTool === "delete"
-                ? "cursor-not-allowed"
-                : activeTool === "select-rotation"
-                  ? "pointer"
-                  : "cursor-default"
-        }`}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
+        className={`w-full h-full ${activeTool === "add-node" ? "cursor-crosshair" : "cursor-grab active:cursor-grabbing"}`}
+        onMouseDown={onCanvasMouseDown}
+        onTouchStart={onCanvasMouseDown}
+        onMouseMove={onCanvasMouseMove}
+        onTouchMove={onCanvasMouseMove}
+        onMouseUp={onCanvasMouseUp}
+        onTouchEnd={onCanvasMouseUp}
+        onMouseLeave={onCanvasMouseUp}
         onClick={onCanvasClick}
+        onWheel={onCanvasWheel}
       >
         <defs>
           <marker
@@ -81,153 +152,192 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             refY="3.5"
             orient="auto"
           >
-            <polygon points="0 0, 10 3.5, 0 7" fill="#2c6455" />
+            <polygon points="0 0, 10 3.5, 0 7" fill="#3aebb9" opacity="0.8" />
+          </marker>
+          <marker
+            id="arrowhead-highlight"
+            markerWidth="10"
+            markerHeight="7"
+            refX="28"
+            refY="3.5"
+            orient="auto"
+          >
+            <polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b" />
           </marker>
         </defs>
 
-        {edges.map((edge, i) => {
-          const s = getNode(edge.sourceId);
-          const t = getNode(edge.targetId);
-          if (!s || !t) return null;
+        <g
+          transform={`translate(${transform.x}, ${transform.y}) scale(${transform.k})`}
+        >
+          <g>
+            {edges.map((edge, index) => {
+              const s = nodes.find((n) => n.id === edge.sourceId);
+              const t = nodes.find((n) => n.id === edge.targetId);
+              if (!s || !t) return null;
 
-          const midX = (s.x + t.x) / 2;
-          const midY = (s.y + t.y) / 2;
+              const edgeKey = `${Math.min(s.id, t.id)}-${Math.max(s.id, t.id)}`;
+              const isVisitedEdge = visitedEdges.has(edgeKey);
+              const isEvaluating =
+                evaluatingEdge &&
+                ((evaluatingEdge.sourceId === edge.sourceId &&
+                  evaluatingEdge.targetId === edge.targetId) ||
+                  (!isDirected &&
+                    evaluatingEdge.sourceId === edge.targetId &&
+                    evaluatingEdge.targetId === edge.sourceId));
 
-          const edgeKey = `${Math.min(s.id, t.id)}-${Math.max(s.id, t.id)}`;
-          const isVisitedEdge = visitedEdges.has(edgeKey);
+              let edgeText = edge.weight.toString();
+              if (selectedAlgo === "FORD_FULKERSON" && ffFlows) {
+                const flow = ffFlows[`${edge.sourceId}-${edge.targetId}`] || 0;
+                edgeText = `${flow}/${edge.weight}`;
+              }
 
-          const isEvaluating =
-            evaluatingEdge &&
-            ((evaluatingEdge.sourceId === edge.sourceId &&
-              evaluatingEdge.targetId === edge.targetId) ||
-              (!isDirected &&
-                evaluatingEdge.sourceId === edge.targetId &&
-                evaluatingEdge.targetId === edge.sourceId));
+              const baseStyle = getBaseEdgeStyle();
+              let lineColor = isEvaluating
+                ? "#f59e0b"
+                : isVisitedEdge
+                  ? "#3aebb9"
+                  : baseStyle.color;
 
-          const isAugmentingPath =
-            ffAugmentingEdges?.has(edgeKey) &&
-            selectedAlgo === "FORD_FULKERSON";
+              const midX = (s.x + t.x) / 2;
+              const midY = (s.y + t.y) / 2;
 
-          let edgeText = edge.weight.toString();
-          let isSaturated = false;
-          if (selectedAlgo === "FORD_FULKERSON" && ffFlows) {
-            const flow = ffFlows[`${edge.sourceId}-${edge.targetId}`] || 0;
-            edgeText = `${flow}/${edge.weight}`;
-            if (flow === edge.weight) isSaturated = true;
-          }
+              return (
+                <g
+                  key={index}
+                  onClick={() => appMode === "sandbox" && onEdgeClick(index)}
+                >
+                  <line
+                    x1={s.x}
+                    y1={s.y}
+                    x2={t.x}
+                    y2={t.y}
+                    stroke={lineColor}
+                    strokeWidth={baseStyle.width}
+                    markerEnd={isDirected ? "url(#arrowhead)" : undefined}
+                    className="transition-all duration-300 opacity-70"
+                  />
+                  {themeId !== "arvores" && (
+                    <g>
+                      <rect
+                        x={midX - 15}
+                        y={midY - 10}
+                        width={30}
+                        height={20}
+                        rx={4}
+                        className="fill-slate-800"
+                      />
+                      <text
+                        x={midX}
+                        y={midY}
+                        dy=".35em"
+                        textAnchor="middle"
+                        className="fill-white text-[10px] font-bold"
+                      >
+                        {edgeText}
+                      </text>
+                    </g>
+                  )}
+                </g>
+              );
+            })}
+          </g>
 
-          let lineColor = "#05262f";
-          if (isEvaluating) lineColor = "#f59e0b";
-          else if (isAugmentingPath) lineColor = "#0ea5e9";
-          else if (isVisitedEdge) lineColor = "#3aebb9";
-          else if (isSaturated) lineColor = "#ef4444";
+          <g>
+            {nodes.map((node) => {
+              const ludic = getLudicNodeVisuals(node.id);
+              const isVisited = visitedNodes.has(node.id);
+              const isQueue = queueNodes.has(node.id);
 
-          const edgeTextColor =
-            isVisitedEdge || isEvaluating || isAugmentingPath || isSaturated
-              ? "#05272d"
-              : "#ffffff";
+              let fillColor = ludic.bgClass;
+              if (isVisited) fillColor = "fill-ponto-accent";
+              else if (isQueue) fillColor = "fill-ponto-muted";
 
-          return (
-            <g
-              key={i}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (appMode === "sandbox" && activeTool === "delete")
-                  onEdgeClick(i);
-              }}
-              className={`group ${appMode === "sandbox" && activeTool === "delete" ? "cursor-pointer" : ""}`}
-            >
-              <line
-                x1={s.x}
-                y1={s.y}
-                x2={t.x}
-                y2={t.y}
-                stroke={lineColor}
-                strokeWidth="3"
-                markerEnd={isDirected ? "url(#arrowhead)" : undefined}
-                className={`transition-all duration-300 ease-in-out ${isVisitedEdge || isEvaluating || isAugmentingPath ? "opacity-100" : "opacity-60"} ${isEvaluating ? "drop-shadow-[0_0_12px_rgba(245,158,11,1)] z-50" : isAugmentingPath ? "drop-shadow-[0_0_12px_rgba(14,165,233,1)] z-40" : isVisitedEdge ? "drop-shadow-[0_0_8px_rgba(58,235,185,0.8)]" : ""}`}
-              />
+              return (
+                <g
+                  key={node.id}
+                  onMouseDown={(e) => onNodeMouseDown(e, node.id)}
+                  onClick={(e) => onNodeClick(e, node.id)}
+                  className="cursor-pointer group"
+                >
+                  <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r={24}
+                    className={`stroke-[3px] transition-colors duration-300 ${fillColor} ${ludic.borderClass} drop-shadow-md`}
+                  />
 
-              <rect
-                x={selectedAlgo === "FORD_FULKERSON" ? midX - 20 : midX - 12}
-                y={midY - 12}
-                width={selectedAlgo === "FORD_FULKERSON" ? "40" : "24"}
-                height="24"
-                rx="4"
-                fill={lineColor}
-                className="transition-colors duration-300 stroke-[#05272d] stroke-1"
-              />
+                  {ludic.icon && (
+                    <text
+                      x={node.x}
+                      y={node.y}
+                      dy=".35em"
+                      textAnchor="middle"
+                      className="text-2xl pointer-events-none select-none"
+                    >
+                      {ludic.icon}
+                    </text>
+                  )}
 
-              <text
-                x={midX}
-                y={midY}
-                dy=".3em"
-                textAnchor="middle"
-                style={{ fill: edgeTextColor }}
-                className="text-[11px] font-bold select-none pointer-events-none transition-colors duration-300"
-              >
-                {edgeText}
-              </text>
-            </g>
-          );
-        })}
-
-        {nodes.map((node) => {
-          let fillColor = "fill-ponto-darker";
-          let strokeColor = "stroke-ponto-accent";
-          let textColor = "fill-ponto-accent";
-
-          if (visitedNodes.has(node.id)) {
-            fillColor = "fill-ponto-accent";
-            strokeColor = "stroke-ponto-muted";
-            textColor = "fill-ponto-darker";
-          } else if (queueNodes.has(node.id)) {
-            fillColor = "fill-yellow-400";
-            strokeColor = "stroke-yellow-600";
-            textColor = "fill-slate-900";
-          }
-
-          const isSelectedForRotation =
-            activeTool === "select-rotation" &&
-            selectedNodesForRotation.includes(node.id);
-          const isErrorNode = errorNodesForRotation.includes(node.id);
-
-          if (isErrorNode) {
-            fillColor = "fill-red-600";
-            strokeColor = "stroke-red-300";
-            textColor = "fill-white";
-          } else if (isSelectedForRotation) {
-            fillColor = "fill-purple-500";
-            strokeColor = "stroke-purple-300";
-            textColor = "fill-white";
-          }
-
-          return (
-            <g
-              key={node.id}
-              onMouseDown={(e) => onNodeMouseDown(e, node.id)}
-              onClick={(e) => onNodeClick(e, node.id)}
-              className={`group cursor-pointer ${isRotating ? "node-rotating" : ""}`}
-            >
-              <circle
-                cx={node.x}
-                cy={node.y}
-                r={22}
-                className={`stroke-[3px] transition-colors duration-300 ${fillColor} ${strokeColor} shadow-md ${connectionSourceId === node.id ? "stroke-white stroke-[4px]" : ""} ${isSelectedForRotation ? "animate-pulse" : ""}`}
-              />
-              <text
-                x={node.x}
-                y={node.y}
-                dy=".3em"
-                textAnchor="middle"
-                className={`font-bold text-sm pointer-events-none select-none ${textColor}`}
-              >
-                {node.label}
-              </text>
-            </g>
-          );
-        })}
+                  <g>
+                    {themeId === "arvores" && appMode === "game" ? (
+                      <g>
+                        <rect
+                          x={node.x - 20}
+                          y={node.y + 28}
+                          width={40}
+                          height={18}
+                          rx={4}
+                          className="fill-slate-900/80"
+                        />
+                        <text
+                          x={node.x}
+                          y={node.y + 41}
+                          textAnchor="middle"
+                          className="fill-emerald-400 font-mono text-[11px] font-bold"
+                        >
+                          {node.label}g
+                        </text>
+                      </g>
+                    ) : (
+                      /* Texto padrão */
+                      <text
+                        x={node.x}
+                        y={node.y}
+                        dy=".35em"
+                        textAnchor="middle"
+                        className={`font-bold text-sm pointer-events-none select-none ${ludic.icon ? "hidden" : isVisited ? "fill-ponto-darker" : "fill-white"}`}
+                      >
+                        {node.label}
+                      </text>
+                    )}
+                  </g>
+                </g>
+              );
+            })}
+          </g>
+        </g>
       </svg>
-    </main>
+
+      <div className="absolute bottom-6 left-6 flex flex-col gap-2">
+        <button
+          onClick={zoomIn}
+          className="p-3 bg-white rounded-full shadow-lg text-slate-800 hover:bg-slate-100 transition-colors"
+        >
+          +
+        </button>
+        <button
+          onClick={zoomOut}
+          className="p-3 bg-white rounded-full shadow-lg text-slate-800 hover:bg-slate-100 transition-colors"
+        >
+          -
+        </button>
+        <button
+          onClick={resetZoom}
+          className="p-3 bg-white rounded-full shadow-lg text-slate-800 hover:bg-slate-100 transition-colors"
+        >
+          ⟲
+        </button>
+      </div>
+    </div>
   );
 };

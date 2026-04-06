@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Play, Pause, Square } from "lucide-react";
 import type { Node, Edge } from "../types";
+import type { Dispatch, SetStateAction } from "react";
 
 export const ALGORITHM_MODULES: Record<
   string,
@@ -76,6 +77,8 @@ export interface SandboxSidebarProps {
   fwI: number | null;
   fwJ: number | null;
   ffMaxFlow: number;
+  selectedNodesForRotation: number[];
+  setSelectedNodesForRotation: Dispatch<SetStateAction<number[]>>;
 }
 
 export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
