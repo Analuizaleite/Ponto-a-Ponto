@@ -18,7 +18,6 @@ interface GraphCanvasProps {
   dynamicLevel: any;
   themeId?: string | null;
   ffFlows?: Record<string, number>;
-  ffAugmentingEdges?: Set<string>;
   bfNegativeCycleEdges?: Edge[];
   selectedAlgo?: string;
 
@@ -54,7 +53,6 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   dynamicLevel,
   themeId,
   ffFlows,
-  ffAugmentingEdges,
   bfNegativeCycleEdges,
   selectedAlgo,
   transform,
@@ -72,53 +70,24 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 }) => {
   const getLudicNodeVisuals = (nodeId: number) => {
     if (appMode !== "game" || !themeId) {
-      return {
-        icon: null,
-        bgClass: "fill-slate-700",
-        borderClass: "stroke-ponto-accent",
-      };
+      return { icon: null, bgClass: "fill-slate-700", borderClass: "stroke-ponto-accent" };
     }
 
     const isStart = dynamicLevel?.startNodeId === nodeId;
     const isTarget = dynamicLevel?.targetNodeId === nodeId;
 
     if (themeId === "logistica")
-      return {
-        icon: isStart ? "🚑" : isTarget ? "🏥" : "🚦",
-        bgClass: "fill-slate-800",
-        borderClass: "stroke-slate-500",
-      };
+      return { icon: isStart ? "🚑" : isTarget ? "🏥" : "🚦", bgClass: "fill-slate-800", borderClass: "stroke-slate-500" };
     if (themeId === "buscas")
-      return {
-        icon: isStart ? "💻" : isTarget ? "🕷️" : "🖥️",
-        bgClass: "fill-[#0a192f]",
-        borderClass: "stroke-green-400",
-      };
+      return { icon: isStart ? "💻" : isTarget ? "🕷️" : "🖥️", bgClass: "fill-[#0a192f]", borderClass: "stroke-green-400" };
     if (themeId === "infra")
-      return {
-        icon: isStart ? "⚡" : "🏭",
-        bgClass: "fill-amber-950",
-        borderClass: "stroke-amber-500",
-      };
+      return { icon: isStart ? "⚡" : "🏭", bgClass: "fill-amber-950", borderClass: "stroke-amber-500" };
     if (themeId === "crises")
-      return {
-        icon: isStart ? "🚰" : isTarget ? "🏙️" : "💧",
-        bgClass: "fill-cyan-950",
-        borderClass: "stroke-cyan-500",
-      };
-
+      return { icon: isStart ? "🚰" : isTarget ? "🏙️" : "💧", bgClass: "fill-cyan-950", borderClass: "stroke-cyan-500" };
     if (themeId === "arvores")
-      return {
-        icon: "🍎",
-        bgClass: "fill-emerald-500",
-        borderClass: "stroke-white",
-      };
+      return { icon: "🍎", bgClass: "fill-emerald-500", borderClass: "stroke-white" };
 
-    return {
-      icon: null,
-      bgClass: "fill-slate-700",
-      borderClass: "stroke-ponto-accent",
-    };
+    return { icon: null, bgClass: "fill-slate-700", borderClass: "stroke-ponto-accent" };
   };
 
   const getBaseEdgeStyle = () => {
@@ -146,31 +115,15 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         onWheel={onCanvasWheel}
       >
         <defs>
-          <marker
-            id="arrowhead"
-            markerWidth="10"
-            markerHeight="7"
-            refX="28"
-            refY="3.5"
-            orient="auto"
-          >
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="28" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="#3aebb9" opacity="0.8" />
           </marker>
-          <marker
-            id="arrowhead-highlight"
-            markerWidth="10"
-            markerHeight="7"
-            refX="28"
-            refY="3.5"
-            orient="auto"
-          >
+          <marker id="arrowhead-highlight" markerWidth="10" markerHeight="7" refX="28" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b" />
           </marker>
         </defs>
 
-        <g
-          transform={`translate(${transform.x}, ${transform.y}) scale(${transform.k})`}
-        >
+        <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.k})`}>
           <g>
             {edges.map((edge, index) => {
               const s = nodes.find((n) => n.id === edge.sourceId);
@@ -181,19 +134,13 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               const isVisitedEdge = visitedEdges.has(edgeKey);
               const isEvaluating =
                 evaluatingEdge &&
-                ((evaluatingEdge.sourceId === edge.sourceId &&
-                  evaluatingEdge.targetId === edge.targetId) ||
-                  (!isDirected &&
-                    evaluatingEdge.sourceId === edge.targetId &&
-                    evaluatingEdge.targetId === edge.sourceId));
+                ((evaluatingEdge.sourceId === edge.sourceId && evaluatingEdge.targetId === edge.targetId) ||
+                  (!isDirected && evaluatingEdge.sourceId === edge.targetId && evaluatingEdge.targetId === edge.sourceId));
 
               const isNegativeCycleEdge = bfNegativeCycleEdges?.some(
-                (cycleEdge) =>
-                  (cycleEdge.sourceId === edge.sourceId &&
-                    cycleEdge.targetId === edge.targetId) ||
-                  (!isDirected &&
-                    cycleEdge.sourceId === edge.targetId &&
-                    cycleEdge.targetId === edge.sourceId)
+                (ce) =>
+                  (ce.sourceId === edge.sourceId && ce.targetId === edge.targetId) ||
+                  (!isDirected && ce.sourceId === edge.targetId && ce.targetId === edge.sourceId)
               );
 
               let edgeText = edge.weight.toString();
@@ -203,49 +150,31 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               }
 
               const baseStyle = getBaseEdgeStyle();
-              let lineColor = isEvaluating
-                ? "#f59e0b"
-                : isNegativeCycleEdge
-                  ? "#ef4444"
-                  : isVisitedEdge
-                    ? "#3aebb9"
-                    : baseStyle.color;
+              const lineColor = isEvaluating
+                  ? "#f59e0b"
+                  : isNegativeCycleEdge
+                    ? "#ef4444"
+                    : isVisitedEdge
+                      ? "#3aebb9"
+                      : baseStyle.color;
 
+              const lineWidth = baseStyle.width;
               const midX = (s.x + t.x) / 2;
               const midY = (s.y + t.y) / 2;
 
               return (
-                <g
-                  key={index}
-                  onClick={() => appMode === "sandbox" && onEdgeClick(index)}
-                >
+                <g key={index} onClick={() => appMode === "sandbox" && onEdgeClick(index)}>
                   <line
-                    x1={s.x}
-                    y1={s.y}
-                    x2={t.x}
-                    y2={t.y}
+                    x1={s.x} y1={s.y} x2={t.x} y2={t.y}
                     stroke={lineColor}
-                    strokeWidth={baseStyle.width}
+                    strokeWidth={lineWidth}
                     markerEnd={isDirected ? "url(#arrowhead)" : undefined}
                     className="transition-all duration-300 opacity-70"
                   />
                   {themeId !== "arvores" && (
                     <g>
-                      <rect
-                        x={midX - 15}
-                        y={midY - 10}
-                        width={30}
-                        height={20}
-                        rx={4}
-                        className="fill-slate-800"
-                      />
-                      <text
-                        x={midX}
-                        y={midY}
-                        dy=".35em"
-                        textAnchor="middle"
-                        className="fill-white text-[10px] font-bold"
-                      >
+                      <rect x={midX - 15} y={midY - 10} width={30} height={20} rx={4} className="fill-slate-800" />
+                      <text x={midX} y={midY} dy=".35em" textAnchor="middle" className="fill-white text-[10px] font-bold">
                         {edgeText}
                       </text>
                     </g>
@@ -273,51 +202,25 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                   className="cursor-pointer group"
                 >
                   <circle
-                    cx={node.x}
-                    cy={node.y}
-                    r={24}
+                    cx={node.x} cy={node.y} r={24}
                     className={`stroke-[3px] transition-colors duration-300 ${fillColor} ${ludic.borderClass} drop-shadow-md`}
                   />
-
                   {ludic.icon && (
-                    <text
-                      x={node.x}
-                      y={node.y}
-                      dy=".35em"
-                      textAnchor="middle"
-                      className="text-2xl pointer-events-none select-none"
-                    >
+                    <text x={node.x} y={node.y} dy=".35em" textAnchor="middle" className="text-2xl pointer-events-none select-none">
                       {ludic.icon}
                     </text>
                   )}
-
                   <g>
                     {themeId === "arvores" && appMode === "game" ? (
                       <g>
-                        <rect
-                          x={node.x - 20}
-                          y={node.y + 28}
-                          width={40}
-                          height={18}
-                          rx={4}
-                          className="fill-slate-900/80"
-                        />
-                        <text
-                          x={node.x}
-                          y={node.y + 41}
-                          textAnchor="middle"
-                          className="fill-emerald-400 font-mono text-[11px] font-bold"
-                        >
+                        <rect x={node.x - 20} y={node.y + 28} width={40} height={18} rx={4} className="fill-slate-900/80" />
+                        <text x={node.x} y={node.y + 41} textAnchor="middle" className="fill-emerald-400 font-mono text-[11px] font-bold">
                           {node.label}g
                         </text>
                       </g>
                     ) : (
-                      /* Texto padrão */
                       <text
-                        x={node.x}
-                        y={node.y}
-                        dy=".35em"
-                        textAnchor="middle"
+                        x={node.x} y={node.y} dy=".35em" textAnchor="middle"
                         className={`font-bold text-sm pointer-events-none select-none ${ludic.icon ? "hidden" : isVisited ? "fill-ponto-darker" : "fill-white"}`}
                       >
                         {node.label}
@@ -332,24 +235,9 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       </svg>
 
       <div className="absolute bottom-6 left-6 flex flex-col gap-2">
-        <button
-          onClick={zoomIn}
-          className="p-3 bg-white rounded-full shadow-lg text-slate-800 hover:bg-slate-100 transition-colors"
-        >
-          +
-        </button>
-        <button
-          onClick={zoomOut}
-          className="p-3 bg-white rounded-full shadow-lg text-slate-800 hover:bg-slate-100 transition-colors"
-        >
-          -
-        </button>
-        <button
-          onClick={resetZoom}
-          className="p-3 bg-white rounded-full shadow-lg text-slate-800 hover:bg-slate-100 transition-colors"
-        >
-          ⟲
-        </button>
+        <button onClick={zoomIn} className="p-3 bg-white rounded-full shadow-lg text-slate-800 hover:bg-slate-100 transition-colors">+</button>
+        <button onClick={zoomOut} className="p-3 bg-white rounded-full shadow-lg text-slate-800 hover:bg-slate-100 transition-colors">-</button>
+        <button onClick={resetZoom} className="p-3 bg-white rounded-full shadow-lg text-slate-800 hover:bg-slate-100 transition-colors">⟲</button>
       </div>
     </div>
   );

@@ -303,9 +303,7 @@ function App() {
   const [fwJ, setFwJ] = useState<number | null>(null);
   const [ffFlows, setFfFlows] = useState<Record<string, number>>({});
   const [ffMaxFlow, setFfMaxFlow] = useState<number>(0);
-  const [ffAugmentingEdges, setFfAugmentingEdges] = useState<Set<string>>(
-    new Set(),
-  );
+  const [ffAugmentingEdges, setFfAugmentingEdges] = useState<Set<string>>(new Set());
   const [selectedNodesForRotation, setSelectedNodesForRotation] = useState<
     number[]
   >([]);
@@ -371,22 +369,20 @@ function App() {
         selectedAlgo !== "AVL"
       ) {
         const isFF = selectedAlgo === "FORD_FULKERSON";
-        const searchStart = (isFF ? flowSourceId : startNodeId)
-          .trim()
-          .toLowerCase();
+        const searchStart = startNodeId.trim();
         startNode = nodes.find(
           (n) =>
-            n.label.toLowerCase() === searchStart ||
+            n.label === searchStart ||
             n.id.toString() === searchStart,
         );
         if (!startNode)
           return alert(`Nó inicial ${isFF ? "(Fonte)" : ""} não encontrado.`);
 
         if (isFF) {
-          const searchTarget = flowSinkId.trim().toLowerCase();
+          const searchTarget = targetNodeId.trim();
           targetNode = nodes.find(
             (n) =>
-              n.label.toLowerCase() === searchTarget ||
+              n.label === searchTarget ||
               n.id.toString() === searchTarget,
           );
           if (!targetNode)
@@ -479,18 +475,15 @@ function App() {
       if (step.maxFlow !== undefined && selectedAlgo === "FORD_FULKERSON")
         setFfMaxFlow(step.maxFlow);
 
-      if (
-        (step.type === "find-path" || step.type === "augment") &&
-        step.pathEdges
-      ) {
-        const pathSet = new Set<string>();
-        step.pathEdges.forEach((e: Edge) =>
-          pathSet.add(
-            `${Math.min(e.sourceId, e.targetId)}-${Math.max(e.sourceId, e.targetId)}`,
-          ),
-        );
-        setFfAugmentingEdges(pathSet);
-      } else if (step.type === "done") setFfAugmentingEdges(new Set());
+      if (step.type === "augment" && step.pathEdges) {
+        setFfAugmentingEdges((prev) => {
+          const next = new Set(prev);
+          step.pathEdges.forEach((e: Edge) =>
+            next.add(`${Math.min(e.sourceId, e.targetId)}-${Math.max(e.sourceId, e.targetId)}`)
+          );
+          return next;
+        });
+      }
 
       if (step.type === "test-edge" && step.edge) setEvaluatingEdge(step.edge);
       else if (step.type === "relax" || step.type === "done")
@@ -505,6 +498,10 @@ function App() {
         );
         setVisitedEdges(newTree);
       }
+
+      if (step.type === "visit" && step.nodeId !== undefined)
+        setCurrentNodeId(step.nodeId);
+      else if (step.type === "done") setCurrentNodeId(null);
 
       if (step.type === "queue" && step.nodeId !== undefined) {
         setQueueNodes((prev) => new Set(prev).add(step.nodeId));
@@ -926,7 +923,6 @@ function App() {
               }
               evaluatingEdge={evaluatingEdge}
               ffFlows={ffFlows}
-              ffAugmentingEdges={ffAugmentingEdges}
               bfNegativeCycleEdges={bfNegativeCycleEdges}
               isRotating={false}
             />
