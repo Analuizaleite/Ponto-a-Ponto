@@ -46,10 +46,10 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   queueNodes,
   visitedEdges,
   evaluatingEdge,
-  selectedNodesForRotation,
-  errorNodesForRotation,
-  isRotating,
-  connectionSourceId,
+  selectedNodesForRotation: _selectedNodesForRotation,
+  errorNodesForRotation: _errorNodesForRotation,
+  isRotating: _isRotating,
+  connectionSourceId: _connectionSourceId,
   dynamicLevel,
   themeId,
   ffFlows,
@@ -234,7 +234,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         </g>
       </svg>
 
-      <div className="absolute bottom-6 left-6 flex flex-col gap-2">
+      <div className="absolute bottom-6 md:bottom-6 top-4 md:top-auto left-4 md:left-6 flex flex-col gap-2">
         <button onClick={zoomIn} className="p-3 bg-white rounded-full shadow-lg text-slate-800 hover:bg-slate-100 transition-colors">+</button>
         <button onClick={zoomOut} className="p-3 bg-white rounded-full shadow-lg text-slate-800 hover:bg-slate-100 transition-colors">-</button>
         <button onClick={resetZoom} className="p-3 bg-white rounded-full shadow-lg text-slate-800 hover:bg-slate-100 transition-colors">⟲</button>

@@ -224,6 +224,68 @@ const generateDynamicLevel = (algo: string) => {
   };
 };
 
+function MobileBottomSheet({ children, appMode }: { children: React.ReactNode; appMode: string }) {
+  const SNAP_DEFAULT = 35; 
+  const SNAP_MID = 55;     
+  const SNAP_MIN = 10;    
+
+  const [heightPct, setHeightPct] = useState(SNAP_DEFAULT);
+  const dragStartY = useRef<number | null>(null);
+  const dragStartH = useRef<number>(SNAP_DEFAULT);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setHeightPct(SNAP_DEFAULT); }, [appMode]);
+
+  const getClientY = (e: React.TouchEvent | React.MouseEvent) =>
+    "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+
+  const onDragStart = (e: React.TouchEvent | React.MouseEvent) => {
+    dragStartY.current = getClientY(e);
+    dragStartH.current = heightPct;
+  };
+
+  const onDragMove = (e: React.TouchEvent | React.MouseEvent) => {
+    if (dragStartY.current === null || !containerRef.current) return;
+    const containerH = containerRef.current.parentElement!.clientHeight;
+    const dy = dragStartY.current - getClientY(e);
+    const deltaPct = (dy / containerH) * 100;
+    const next = Math.min(85, Math.max(SNAP_MIN, dragStartH.current + deltaPct));
+    setHeightPct(next);
+  };
+
+  const onDragEnd = () => {
+    if (dragStartY.current === null) return;
+    dragStartY.current = null;
+    const snaps = [SNAP_MIN, SNAP_DEFAULT, SNAP_MID];
+    const closest = snaps.reduce((a, b) => Math.abs(a - heightPct) < Math.abs(b - heightPct) ? a : b);
+    setHeightPct(closest);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="md:hidden absolute bottom-0 left-0 right-0 bg-ponto-dark rounded-t-2xl shadow-2xl z-20 flex flex-col"
+      style={{ height: `${heightPct}%`, transition: dragStartY.current === null ? "height 0.25s ease" : "none" }}
+    >
+      <div
+        className="flex justify-center items-center py-3 cursor-grab active:cursor-grabbing shrink-0"
+        onMouseDown={onDragStart}
+        onMouseMove={onDragMove}
+        onMouseUp={onDragEnd}
+        onMouseLeave={onDragEnd}
+        onTouchStart={onDragStart}
+        onTouchMove={onDragMove}
+        onTouchEnd={onDragEnd}
+      >
+        <div className="w-10 h-1 bg-ponto-muted/60 rounded-full" />
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 pb-6">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [showSplash, setShowSplash] = useState(true);
 
@@ -303,7 +365,9 @@ function App() {
   const [fwJ, setFwJ] = useState<number | null>(null);
   const [ffFlows, setFfFlows] = useState<Record<string, number>>({});
   const [ffMaxFlow, setFfMaxFlow] = useState<number>(0);
-  const [ffAugmentingEdges, setFfAugmentingEdges] = useState<Set<string>>(new Set());
+  /*const [setFfAugmentingEdges] = useState<Set<string>>(
+    new Set(),
+  );*/
   const [selectedNodesForRotation, setSelectedNodesForRotation] = useState<
     number[]
   >([]);
@@ -351,7 +415,7 @@ function App() {
     setFwJ(null);
     setFfFlows({});
     setFfMaxFlow(0);
-    setFfAugmentingEdges(new Set());
+    //setFfAugmentingEdges(new Set());
   };
 
   const stopAnimation = () => {
@@ -375,9 +439,7 @@ function App() {
         const isFF = selectedAlgo === "FORD_FULKERSON";
         const searchStart = startNodeId.trim();
         startNode = nodes.find(
-          (n) =>
-            n.label === searchStart ||
-            n.id.toString() === searchStart,
+          (n) => n.label === searchStart || n.id.toString() === searchStart,
         );
         if (!startNode)
           return alert(`Nó inicial ${isFF ? "(Fonte)" : ""} não encontrado.`);
@@ -385,9 +447,7 @@ function App() {
         if (isFF) {
           const searchTarget = targetNodeId.trim();
           targetNode = nodes.find(
-            (n) =>
-              n.label === searchTarget ||
-              n.id.toString() === searchTarget,
+            (n) => n.label === searchTarget || n.id.toString() === searchTarget,
           );
           if (!targetNode)
             return alert(`Nó sumidouro (destino) não encontrado.`);
@@ -413,13 +473,24 @@ function App() {
       else if (selectedAlgo === "KRUSKAL")
         steps = generateKruskalSteps(nodesCount, edges);
       else if (selectedAlgo === "BELLMAN_FORD")
-        steps = generateBellmanFordSteps(startId, nodesCount, edges, isDirected);
+        steps = generateBellmanFordSteps(
+          startId,
+          nodesCount,
+          edges,
+          isDirected,
+        );
       else if (selectedAlgo === "FLOYD_WARSHALL")
         steps = generateFloydWarshallSteps(nodesCount, edges, isDirected);
       else if (selectedAlgo === "FORD_FULKERSON")
-        steps = generateFordFulkersonSteps(startId, targetId, edges, isDirected);
+        steps = generateFordFulkersonSteps(
+          startId,
+          targetId,
+          edges,
+          isDirected,
+        );
 
-      if (animationIntervalRef.current) clearInterval(animationIntervalRef.current);
+      if (animationIntervalRef.current)
+        clearInterval(animationIntervalRef.current);
       resetVisualState();
       stepsRef.current = steps;
       currentStepRef.current = 0;
@@ -470,15 +541,17 @@ function App() {
       if (step.maxFlow !== undefined && selectedAlgo === "FORD_FULKERSON")
         setFfMaxFlow(step.maxFlow);
 
-      if (step.type === "augment" && step.pathEdges) {
+      /*if (step.type === "augment" && step.pathEdges) {
         setFfAugmentingEdges((prev) => {
           const next = new Set(prev);
           step.pathEdges.forEach((e: Edge) =>
-            next.add(`${Math.min(e.sourceId, e.targetId)}-${Math.max(e.sourceId, e.targetId)}`)
+            next.add(
+              `${Math.min(e.sourceId, e.targetId)}-${Math.max(e.sourceId, e.targetId)}`,
+            ),
           );
           return next;
         });
-      }
+      }*/
 
       if (step.type === "test-edge" && step.edge) setEvaluatingEdge(step.edge);
       else if (step.type === "relax" || step.type === "done")
@@ -534,7 +607,7 @@ function App() {
     setSelectedNodesForRotation([]);
     setErrorNodesForRotation([]);
     setErrorMessage("");
-    setTransform({ x: 0, y: 0, k: 1 }); 
+    setTransform({ x: 0, y: 0, k: 1 });
   };
 
   const loadLevel = (themeId: string, levelIdx: number) => {
@@ -560,7 +633,7 @@ function App() {
     setFfMaxFlow(0);
     setPlayerPath([]);
     setVisitedNodes(new Set());
-    setTransform({ x: 0, y: 0, k: 1 }); 
+    setTransform({ x: 0, y: 0, k: 1 });
   };
 
   const resetGame = () =>
@@ -645,7 +718,7 @@ function App() {
   };
 
   const handleCanvasClick = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (appMode === "game" || isPanning) return; 
+    if (appMode === "game" || isPanning) return;
     if (activeTool === "add-node") {
       const rect = e.currentTarget.getBoundingClientRect();
       const x = (e.clientX - rect.left - transform.x) / transform.k;
@@ -832,7 +905,7 @@ function App() {
         isDirected={isDirected}
         setIsDirected={setIsDirected}
         clearAll={clearAll}
-        loadLevel={(idx) => {}}
+        loadLevel={() => {}}
         setEdges={setEdges}
       />
 
@@ -869,7 +942,10 @@ function App() {
                       {theme.description}
                     </p>
                     <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider mt-auto pt-4 border-t border-ponto-muted/20">
-                      <span>{theme.levels.length} {theme.levels.length === 1 ? 'Missão' : 'Missões'}</span>
+                      <span>
+                        {theme.levels.length}{" "}
+                        {theme.levels.length === 1 ? "Missão" : "Missões"}
+                      </span>
                       <span className="text-ponto-accent group-hover:translate-x-1 transition-transform">
                         Iniciar ➔
                       </span>
@@ -880,7 +956,7 @@ function App() {
             </div>
           </div>
         ) : (
-          <>
+          <div className="relative flex-1 overflow-hidden">
             <GraphCanvas
               appMode={appMode}
               activeTool={activeTool}
@@ -895,9 +971,7 @@ function App() {
               connectionSourceId={connectionSourceId}
               dynamicLevel={dynamicLevel}
               themeId={selectedThemeId}
-              selectedAlgo={
-                appMode === "game" ? dynamicLevel?.algo : selectedAlgo
-              }
+              selectedAlgo={appMode === "game" ? dynamicLevel?.algo : selectedAlgo}
               onCanvasMouseDown={handleCanvasMouseDown}
               onCanvasMouseMove={handleCanvasMouseMove}
               onCanvasMouseUp={handleCanvasMouseUp}
@@ -909,15 +983,14 @@ function App() {
               onCanvasClick={handleCanvasClick}
               onNodeMouseDown={handleNodeMouseDown}
               onNodeClick={handleNodeClick}
-              onEdgeClick={(index) =>
-                setEdges(edges.filter((_, i) => i !== index))
-              }
+              onEdgeClick={(index) => setEdges(edges.filter((_, i) => i !== index))}
               evaluatingEdge={evaluatingEdge}
               ffFlows={ffFlows}
               bfNegativeCycleEdges={bfNegativeCycleEdges}
               isRotating={false}
             />
-            <aside className="w-full md:w-80 h-1/2 md:h-full bg-ponto-dark border-t md:border-t-0 md:border-l border-ponto-muted/50 p-6 md:p-6 shadow-xl z-10 flex flex-col md:gap-6 overflow-y-auto">
+
+            <aside className="hidden md:flex flex-col w-80 h-full absolute right-0 top-0 bg-ponto-dark border-l border-ponto-muted/50 p-6 shadow-xl z-10 gap-6 overflow-y-auto">
               {appMode === "sandbox" ? (
                 <SandboxSidebar
                   nodes={nodes}
@@ -966,12 +1039,7 @@ function App() {
                 />
               ) : (
                 <GameSidebar
-                  levelConfigs={
-                    selectedThemeId
-                      ? GAME_THEMES.find((t) => t.id === selectedThemeId)!
-                          .levels
-                      : []
-                  }
+                  levelConfigs={selectedThemeId ? GAME_THEMES.find((t) => t.id === selectedThemeId)!.levels : []}
                   currentLevelIndex={currentLevelIndex}
                   dynamicLevel={dynamicLevel}
                   lives={lives}
@@ -984,22 +1052,11 @@ function App() {
                   handleRotationGameChallenge={(type) => {
                     if (dynamicLevel?.algo !== "AVL") return;
                     if (type === dynamicLevel.expectedRotation) {
-                      const sortedNodes = [...nodes].sort(
-                        (a, b) => parseInt(a.label) - parseInt(b.label),
-                      );
+                      const sortedNodes = [...nodes].sort((a, b) => parseInt(a.label) - parseInt(b.label));
                       if (sortedNodes.length === 3) {
-                        const left = sortedNodes[0];
-                        const root = sortedNodes[1];
-                        const right = sortedNodes[2];
-                        setNodes([
-                          { ...left, x: 250, y: 220 },
-                          { ...root, x: 350, y: 120 },
-                          { ...right, x: 450, y: 220 },
-                        ]);
-                        setEdges([
-                          { sourceId: root.id, targetId: left.id, weight: 1 },
-                          { sourceId: root.id, targetId: right.id, weight: 1 },
-                        ]);
+                        const [left, root, right] = sortedNodes;
+                        setNodes([{ ...left, x: 250, y: 220 }, { ...root, x: 350, y: 120 }, { ...right, x: 450, y: 220 }]);
+                        setEdges([{ sourceId: root.id, targetId: left.id, weight: 1 }, { sourceId: root.id, targetId: right.id, weight: 1 }]);
                       }
                       setGameStatus("won");
                     } else {
@@ -1010,7 +1067,85 @@ function App() {
                 />
               )}
             </aside>
-          </>
+
+            <MobileBottomSheet appMode={appMode}>
+              {appMode === "sandbox" ? (
+                <SandboxSidebar
+                  nodes={nodes}
+                  edges={edges}
+                  isDirected={isDirected}
+                  customNodeId={customNodeId}
+                  setCustomNodeId={setCustomNodeId}
+                  selectedAlgo={selectedAlgo}
+                  setSelectedAlgo={setSelectedAlgo}
+                  startNodeId={startNodeId}
+                  setStartNodeId={setStartNodeId}
+                  targetNodeId={targetNodeId}
+                  setTargetNodeId={setTargetNodeId}
+                  flowSourceId={flowSourceId}
+                  setFlowSourceId={setFlowSourceId}
+                  flowSinkId={flowSinkId}
+                  setFlowSinkId={setFlowSinkId}
+                  animationStatus={animationStatus}
+                  onPlay={playAnimation}
+                  onPause={pauseAnimation}
+                  onStop={stopAnimation}
+                  selectedNodesForRotation={selectedNodesForRotation}
+                  setSelectedNodesForRotation={setSelectedNodesForRotation}
+                  setErrorNodesForRotation={setErrorNodesForRotation}
+                  errorMessage={errorMessage}
+                  setErrorMessage={setErrorMessage}
+                  handleManualRotation={() => {}}
+                  mstTotalWeight={mstTotalWeight}
+                  dijkstraDistances={dijkstraDistances}
+                  dijkstraPrevious={dijkstraPrevious}
+                  dfsTD={dfsTD}
+                  dfsTT={dfsTT}
+                  bfsL={bfsL}
+                  bfsNivel={bfsNivel}
+                  bfsPai={bfsPai}
+                  bfDistances={bfDistances}
+                  bfPrevious={bfPrevious}
+                  bfIteration={bfIteration}
+                  bfHasNegativeCycle={bfHasNegativeCycle}
+                  fwDistances={fwDistances}
+                  fwPrevious={fwPrevious}
+                  fwK={fwK}
+                  fwI={fwI}
+                  fwJ={fwJ}
+                  ffMaxFlow={ffMaxFlow}
+                />
+              ) : (
+                <GameSidebar
+                  levelConfigs={selectedThemeId ? GAME_THEMES.find((t) => t.id === selectedThemeId)!.levels : []}
+                  currentLevelIndex={currentLevelIndex}
+                  dynamicLevel={dynamicLevel}
+                  lives={lives}
+                  gameStatus={gameStatus}
+                  playerPath={playerPath}
+                  loadLevel={() => {}}
+                  resetGame={resetGame}
+                  nextLevel={nextLevel}
+                  onReturnToHub={() => setGamePhase("HUB")}
+                  handleRotationGameChallenge={(type) => {
+                    if (dynamicLevel?.algo !== "AVL") return;
+                    if (type === dynamicLevel.expectedRotation) {
+                      const sortedNodes = [...nodes].sort((a, b) => parseInt(a.label) - parseInt(b.label));
+                      if (sortedNodes.length === 3) {
+                        const [left, root, right] = sortedNodes;
+                        setNodes([{ ...left, x: 250, y: 220 }, { ...root, x: 350, y: 120 }, { ...right, x: 450, y: 220 }]);
+                        setEdges([{ sourceId: root.id, targetId: left.id, weight: 1 }, { sourceId: root.id, targetId: right.id, weight: 1 }]);
+                      }
+                      setGameStatus("won");
+                    } else {
+                      setLives((l) => l - 1);
+                      if (lives - 1 <= 0) setGameStatus("lost");
+                    }
+                  }}
+                />
+              )}
+            </MobileBottomSheet>
+          </div>
         )}
       </div>
     </div>
