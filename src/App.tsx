@@ -326,12 +326,7 @@ function App() {
     stopAnimation();
   }, [appMode]);
 
-  const stopAnimation = () => {
-    if (animationIntervalRef.current)
-      clearInterval(animationIntervalRef.current);
-    setAnimationStatus("idle");
-    currentStepRef.current = 0;
-    stepsRef.current = [];
+  const resetVisualState = () => {
     setVisitedNodes(new Set());
     setQueueNodes(new Set());
     setVisitedEdges(new Set());
@@ -357,6 +352,15 @@ function App() {
     setFfFlows({});
     setFfMaxFlow(0);
     setFfAugmentingEdges(new Set());
+  };
+
+  const stopAnimation = () => {
+    if (animationIntervalRef.current)
+      clearInterval(animationIntervalRef.current);
+    setAnimationStatus("idle");
+    currentStepRef.current = 0;
+    stepsRef.current = [];
+    resetVisualState();
   };
 
   const playAnimation = () => {
@@ -409,23 +413,14 @@ function App() {
       else if (selectedAlgo === "KRUSKAL")
         steps = generateKruskalSteps(nodesCount, edges);
       else if (selectedAlgo === "BELLMAN_FORD")
-        steps = generateBellmanFordSteps(
-          startId,
-          nodesCount,
-          edges,
-          isDirected,
-        );
+        steps = generateBellmanFordSteps(startId, nodesCount, edges, isDirected);
       else if (selectedAlgo === "FLOYD_WARSHALL")
         steps = generateFloydWarshallSteps(nodesCount, edges, isDirected);
       else if (selectedAlgo === "FORD_FULKERSON")
-        steps = generateFordFulkersonSteps(
-          startId,
-          targetId,
-          edges,
-          isDirected,
-        );
+        steps = generateFordFulkersonSteps(startId, targetId, edges, isDirected);
 
-      stopAnimation();
+      if (animationIntervalRef.current) clearInterval(animationIntervalRef.current);
+      resetVisualState();
       stepsRef.current = steps;
       currentStepRef.current = 0;
     }
@@ -498,10 +493,6 @@ function App() {
         );
         setVisitedEdges(newTree);
       }
-
-      if (step.type === "visit" && step.nodeId !== undefined)
-        setCurrentNodeId(step.nodeId);
-      else if (step.type === "done") setCurrentNodeId(null);
 
       if (step.type === "queue" && step.nodeId !== undefined) {
         setQueueNodes((prev) => new Set(prev).add(step.nodeId));
@@ -926,7 +917,7 @@ function App() {
               bfNegativeCycleEdges={bfNegativeCycleEdges}
               isRotating={false}
             />
-            <aside className="w-full md:w-80 h-1/2 md:h-full bg-ponto-dark border-t md:border-t-0 md:border-l border-ponto-muted/50 p-6 shadow-xl z-10 flex flex-col gap-6 overflow-y-auto">
+            <aside className="w-full md:w-80 h-1/2 md:h-full bg-ponto-dark border-t md:border-t-0 md:border-l border-ponto-muted/50 p-6 md:p-6 shadow-xl z-10 flex flex-col md:gap-6 overflow-y-auto">
               {appMode === "sandbox" ? (
                 <SandboxSidebar
                   nodes={nodes}
