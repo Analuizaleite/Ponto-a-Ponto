@@ -11,6 +11,7 @@ export interface BellmanFordStep {
   treeEdges?: Edge[];
   iteration?: number | string;
   hasNegativeCycle?: boolean;
+  negativeCycleEdges?: Edge[];
   distancesState?: Record<number, number>;
   previousState?: Record<number, number | null>;
 }
@@ -94,6 +95,7 @@ export function generateBellmanFordSteps(
   }
 
   let hasNegativeCycle = false;
+  let negativeCycleEdges: Edge[] = [];
   pushStep({ type: "iteration", iteration: "Verificando Ciclos..." });
 
   for (const edge of edgeList) {
@@ -108,10 +110,15 @@ export function generateBellmanFordSteps(
 
     if (distances[u] !== Infinity && distances[u] + w < distances[v]) {
       hasNegativeCycle = true;
+
+      // Reconstruir o ciclo negativo
+      negativeCycleEdges = reconstructNegativeCycle(previous, v, edgeList);
+
       pushStep({
         type: "queue",
         nodeId: v,
         iteration: "CICLO NEGATIVO ENCONTRADO!",
+        negativeCycleEdges,
       });
       break;
     }
@@ -120,8 +127,40 @@ export function generateBellmanFordSteps(
   steps.push({
     type: "done",
     hasNegativeCycle,
+    negativeCycleEdges,
     distancesState: { ...distances },
     previousState: { ...previous },
   });
   return steps;
+}
+
+function reconstructNegativeCycle(
+  previous: Record<number, number | null>,
+  startNode: number,
+  edgeList: Edge[],
+): Edge[] {
+  const cycleEdges: Edge[] = [];
+  const visited = new Set<number>();
+  let current = startNode;
+
+  while (!visited.has(current) && previous[current] !== null) {
+    visited.add(current);
+    const prev = previous[current]!;
+
+    const edge = edgeList.find(e => e.sourceId === prev && e.targetId === current);
+    if (edge) {
+      cycleEdges.push(edge);
+    }
+
+    current = prev;
+  }
+
+  if (previous[current] !== null) {
+    const closingEdge = edgeList.find(e => e.sourceId === previous[current]! && e.targetId === startNode);
+    if (closingEdge) {
+      cycleEdges.push(closingEdge);
+    }
+  }
+
+  return cycleEdges;
 }

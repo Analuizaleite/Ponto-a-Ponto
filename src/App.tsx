@@ -286,6 +286,7 @@ function App() {
   );
   const [bfIteration, setBfIteration] = useState<number | string>(0);
   const [bfHasNegativeCycle, setBfHasNegativeCycle] = useState<boolean>(false);
+  const [bfNegativeCycleEdges, setBfNegativeCycleEdges] = useState<Edge[]>([]);
   const [dfsTD, setDfsTD] = useState<Record<number, number>>({});
   const [dfsTT, setDfsTT] = useState<Record<number, number>>({});
   const [bfsL, setBfsL] = useState<Record<number, number>>({});
@@ -349,6 +350,7 @@ function App() {
     setBfPrevious({});
     setBfIteration(0);
     setBfHasNegativeCycle(false);
+    setBfNegativeCycleEdges([]);
     setFwDistances({});
     setFwPrevious({});
     setFwK(null);
@@ -457,6 +459,11 @@ function App() {
       if (step.iteration !== undefined) setBfIteration(step.iteration);
       if (step.hasNegativeCycle !== undefined)
         setBfHasNegativeCycle(step.hasNegativeCycle);
+      if (step.negativeCycleEdges !== undefined)
+        setBfNegativeCycleEdges(step.negativeCycleEdges);
+      if (step.type === "done" && selectedAlgo === "BELLMAN_FORD") {
+        setBfIteration(bfHasNegativeCycle ? "CICLO NEGATIVO!" : "Concluído");
+      }
       if (step.distancesState && selectedAlgo === "FLOYD_WARSHALL")
         setFwDistances(step.distancesState);
       if (step.previousState && selectedAlgo === "FLOYD_WARSHALL")
@@ -920,6 +927,7 @@ function App() {
               evaluatingEdge={evaluatingEdge}
               ffFlows={ffFlows}
               ffAugmentingEdges={ffAugmentingEdges}
+              bfNegativeCycleEdges={bfNegativeCycleEdges}
               isRotating={false}
             />
             <aside className="w-full md:w-80 h-1/2 md:h-full bg-ponto-dark border-t md:border-t-0 md:border-l border-ponto-muted/50 p-6 shadow-xl z-10 flex flex-col gap-6 overflow-y-auto">

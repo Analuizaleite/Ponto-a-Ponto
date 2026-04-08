@@ -19,6 +19,7 @@ interface GraphCanvasProps {
   themeId?: string | null;
   ffFlows?: Record<string, number>;
   ffAugmentingEdges?: Set<string>;
+  bfNegativeCycleEdges?: Edge[];
   selectedAlgo?: string;
 
   transform: { x: number; y: number; k: number };
@@ -54,6 +55,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   themeId,
   ffFlows,
   ffAugmentingEdges,
+  bfNegativeCycleEdges,
   selectedAlgo,
   transform,
   onCanvasMouseDown,
@@ -185,6 +187,15 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                     evaluatingEdge.sourceId === edge.targetId &&
                     evaluatingEdge.targetId === edge.sourceId));
 
+              const isNegativeCycleEdge = bfNegativeCycleEdges?.some(
+                (cycleEdge) =>
+                  (cycleEdge.sourceId === edge.sourceId &&
+                    cycleEdge.targetId === edge.targetId) ||
+                  (!isDirected &&
+                    cycleEdge.sourceId === edge.targetId &&
+                    cycleEdge.targetId === edge.sourceId)
+              );
+
               let edgeText = edge.weight.toString();
               if (selectedAlgo === "FORD_FULKERSON" && ffFlows) {
                 const flow = ffFlows[`${edge.sourceId}-${edge.targetId}`] || 0;
@@ -194,9 +205,11 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               const baseStyle = getBaseEdgeStyle();
               let lineColor = isEvaluating
                 ? "#f59e0b"
-                : isVisitedEdge
-                  ? "#3aebb9"
-                  : baseStyle.color;
+                : isNegativeCycleEdge
+                  ? "#ef4444"
+                  : isVisitedEdge
+                    ? "#3aebb9"
+                    : baseStyle.color;
 
               const midX = (s.x + t.x) / 2;
               const midY = (s.y + t.y) / 2;
