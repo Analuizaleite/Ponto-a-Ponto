@@ -427,9 +427,9 @@ function App() {
           isDirected,
         );
 
+      stopAnimation();
       stepsRef.current = steps;
       currentStepRef.current = 0;
-      stopAnimation();
     }
 
     setAnimationStatus("playing");
