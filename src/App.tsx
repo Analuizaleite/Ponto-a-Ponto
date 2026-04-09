@@ -20,6 +20,7 @@ import { generateKruskalSteps } from "./algorithms/kruskal";
 import { generateBellmanFordSteps } from "./algorithms/bellmanFord";
 import { generateFloydWarshallSteps } from "./algorithms/floydWarshall";
 import { generateFordFulkersonSteps } from "./algorithms/fordFulkersonBFS";
+import { performBalancedRotation } from "./algorithms/avl";
 
 // --- FUNÇÃO AUXILIAR PARA O FORD-FULKERSON ---
 const checkResidualPathExists = (
@@ -380,6 +381,14 @@ function App() {
     const timer = setTimeout(() => setShowSplash(false), 3000);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (activeTool !== "select-rotation") {
+      setSelectedNodesForRotation([]);
+      setErrorNodesForRotation([]);
+      setErrorMessage("");
+    }
+  }, [activeTool]);
 
   useEffect(() => {
     if (appMode === "game") {
@@ -849,6 +858,17 @@ function App() {
       return;
     }
 
+    if (activeTool === "select-rotation") {
+      if (selectedNodesForRotation.includes(nodeId)) {
+        setSelectedNodesForRotation(selectedNodesForRotation.filter((id) => id !== nodeId));
+        return;
+      }
+      if (selectedNodesForRotation.length < 3) {
+        setSelectedNodesForRotation([...selectedNodesForRotation, nodeId]);
+      }
+      return;
+    }
+
     if (activeTool === "delete") {
       setNodes(nodes.filter((n) => n.id !== nodeId));
       setEdges(
@@ -879,6 +899,93 @@ function App() {
         setConnectionSourceId(null);
       }
     }
+  };
+
+  const handleManualRotation = (type: "LL" | "RR" | "LR" | "RL") => {
+    setErrorMessage("");
+    setErrorNodesForRotation([]);
+
+    if (selectedNodesForRotation.length !== 3) {
+      setErrorMessage(`Selecione exatamente 3 nós no grafo antes de aplicar a rotação. Você selecionou ${selectedNodesForRotation.length}.`);
+      return;
+    }
+
+    const [id0, id1, id2] = selectedNodesForRotation;
+    const n0 = nodes.find((n) => n.id === id0);
+    const n1 = nodes.find((n) => n.id === id1);
+    const n2 = nodes.find((n) => n.id === id2);
+    if (!n0 || !n1 || !n2) return;
+
+    const hasEdge = (a: number, b: number) =>
+      edges.some((e) => (e.sourceId === a && e.targetId === b) || (!isDirected && e.sourceId === b && e.targetId === a));
+
+    const ids = [id0, id1, id2];
+    let rootId: number | null = null;
+    let childIds: number[] = [];
+    for (const candidate of ids) {
+      const others = ids.filter((x) => x !== candidate);
+      if (others.every((o) => hasEdge(candidate, o))) {
+        rootId = candidate;
+        childIds = others;
+        break;
+      }
+    }
+
+    if (rootId === null) {
+      setErrorMessage("Os 3 nós selecionados não formam uma sub-árvore válida. A raiz deve estar conectada aos outros dois nós.");
+      setErrorNodesForRotation(selectedNodesForRotation);
+      return;
+    }
+
+    const root = nodes.find((n) => n.id === rootId)!;
+    const [c0, c1] = childIds.map((id) => nodes.find((n) => n.id === id)!);
+    const leftChild = c0.x < c1.x ? c0 : c1;
+    const rightChild = c0.x < c1.x ? c1 : c0;
+
+    const leftVal = parseInt(leftChild.label);
+    const rightVal = parseInt(rightChild.label);
+    const rootVal = parseInt(root.label);
+
+    let detectedType: string | null = null;
+    if (leftVal < rootVal && rightVal < leftVal) detectedType = "LL";
+    else if (rightVal > rootVal && leftVal > rightVal) detectedType = "RR";
+    else if (leftVal < rootVal && rightVal > leftVal && rightVal < rootVal) detectedType = "LR";
+    else if (rightVal > rootVal && leftVal < rightVal && leftVal > rootVal) detectedType = "RL";
+
+    if (detectedType === null) {
+      setErrorMessage("Não foi possível identificar o tipo de desequilíbrio AVL nos nós selecionados. Verifique os valores dos nós.");
+      setErrorNodesForRotation(selectedNodesForRotation);
+      return;
+    }
+
+    if (type !== detectedType) {
+      const descriptions: Record<string, string> = {
+        LL: "LL (rotação simples à direita) — filho esquerdo com neto esquerdo",
+        RR: "RR (rotação simples à esquerda) — filho direito com neto direito",
+        LR: "LR (rotação dupla esquerda-direita) — filho esquerdo com neto direito",
+        RL: "RL (rotação dupla direita-esquerda) — filho direito com neto esquerdo",
+      };
+      setErrorMessage(`Rotação incorreta! O desequilíbrio detectado é ${descriptions[detectedType]}, não ${type}.`);
+      setErrorNodesForRotation(selectedNodesForRotation);
+      return;
+    }
+
+    // Aplica a rotação visual nos 3 nós selecionados
+    const subNodes = [root, leftChild, rightChild];
+    const { updatedNodes, updatedEdges } = performBalancedRotation(subNodes);
+
+    setNodes(nodes.map((n) => {
+      const updated = updatedNodes.find((u: any) => u.id === n.id);
+      return updated ? updated : n;
+    }));
+
+    const nonSelectedEdges = edges.filter(
+      (e) => !ids.includes(e.sourceId) || !ids.includes(e.targetId)
+    );
+    setEdges([...nonSelectedEdges, ...updatedEdges]);
+
+    setSelectedNodesForRotation([]);
+    setErrorNodesForRotation([]);
   };
 
   if (showSplash)
@@ -987,7 +1094,7 @@ function App() {
               evaluatingEdge={evaluatingEdge}
               ffFlows={ffFlows}
               bfNegativeCycleEdges={bfNegativeCycleEdges}
-              isRotating={false}
+              isRotating={activeTool === 'select-rotation'}
             />
 
             <aside className="hidden md:flex flex-col w-80 h-full absolute right-0 top-0 bg-ponto-dark border-l border-ponto-muted/50 p-6 shadow-xl z-10 gap-6 overflow-y-auto">
@@ -1017,7 +1124,8 @@ function App() {
                   setErrorNodesForRotation={setErrorNodesForRotation}
                   errorMessage={errorMessage}
                   setErrorMessage={setErrorMessage}
-                  handleManualRotation={() => {}}
+                  handleManualRotation={handleManualRotation}
+                  activeTool={activeTool}
                   mstTotalWeight={mstTotalWeight}
                   dijkstraDistances={dijkstraDistances}
                   dijkstraPrevious={dijkstraPrevious}
@@ -1095,7 +1203,8 @@ function App() {
                   setErrorNodesForRotation={setErrorNodesForRotation}
                   errorMessage={errorMessage}
                   setErrorMessage={setErrorMessage}
-                  handleManualRotation={() => {}}
+                  handleManualRotation={handleManualRotation}
+                  activeTool={activeTool}
                   mstTotalWeight={mstTotalWeight}
                   dijkstraDistances={dijkstraDistances}
                   dijkstraPrevious={dijkstraPrevious}

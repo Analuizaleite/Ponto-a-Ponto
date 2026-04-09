@@ -46,9 +46,9 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   queueNodes,
   visitedEdges,
   evaluatingEdge,
-  selectedNodesForRotation: _selectedNodesForRotation,
-  errorNodesForRotation: _errorNodesForRotation,
-  isRotating: _isRotating,
+  selectedNodesForRotation,
+  errorNodesForRotation,
+  isRotating,
   connectionSourceId: _connectionSourceId,
   dynamicLevel,
   themeId,
@@ -189,10 +189,20 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               const ludic = getLudicNodeVisuals(node.id);
               const isVisited = visitedNodes.has(node.id);
               const isQueue = queueNodes.has(node.id);
+              const isSelectedForRotation = isRotating && selectedNodesForRotation.includes(node.id);
+              const isErrorRotation = isRotating && errorNodesForRotation.includes(node.id);
 
               let fillColor = ludic.bgClass;
-              if (isVisited) fillColor = "fill-ponto-accent";
+              if (isErrorRotation) fillColor = "fill-red-500";
+              else if (isSelectedForRotation) fillColor = "fill-yellow-400";
+              else if (isVisited) fillColor = "fill-ponto-accent";
               else if (isQueue) fillColor = "fill-ponto-muted";
+
+              const borderClass = isErrorRotation
+                ? "stroke-red-300"
+                : isSelectedForRotation
+                ? "stroke-yellow-200"
+                : ludic.borderClass;
 
               return (
                 <g
@@ -201,9 +211,16 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                   onClick={(e) => onNodeClick(e, node.id)}
                   className="cursor-pointer group"
                 >
+                  {isSelectedForRotation && (
+                    <circle
+                      cx={node.x} cy={node.y} r={30}
+                      className="fill-yellow-400/20 stroke-yellow-400 stroke-[2px]"
+                      strokeDasharray="4 3"
+                    />
+                  )}
                   <circle
                     cx={node.x} cy={node.y} r={24}
-                    className={`stroke-[3px] transition-colors duration-300 ${fillColor} ${ludic.borderClass} drop-shadow-md`}
+                    className={`stroke-[3px] transition-colors duration-300 ${fillColor} ${borderClass} drop-shadow-md`}
                   />
                   {ludic.icon && (
                     <text x={node.x} y={node.y} dy=".35em" textAnchor="middle" className="text-2xl pointer-events-none select-none">
@@ -221,7 +238,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                     ) : (
                       <text
                         x={node.x} y={node.y} dy=".35em" textAnchor="middle"
-                        className={`font-bold text-sm pointer-events-none select-none ${ludic.icon ? "hidden" : isVisited ? "fill-ponto-darker" : "fill-white"}`}
+                        className={`font-bold text-sm pointer-events-none select-none ${ludic.icon ? "hidden" : (isVisited && !isSelectedForRotation && !isErrorRotation) ? "fill-ponto-darker" : "fill-white"}`}
                       >
                         {node.label}
                       </text>
