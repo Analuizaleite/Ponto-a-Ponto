@@ -225,17 +225,25 @@ const generateDynamicLevel = (algo: string) => {
   };
 };
 
-function MobileBottomSheet({ children, appMode }: { children: React.ReactNode; appMode: string }) {
-  const SNAP_DEFAULT = 35; 
-  const SNAP_MID = 55;     
-  const SNAP_MIN = 10;    
+function MobileBottomSheet({
+  children,
+  appMode,
+}: {
+  children: React.ReactNode;
+  appMode: string;
+}) {
+  const SNAP_DEFAULT = 35;
+  const SNAP_MID = 55;
+  const SNAP_MIN = 10;
 
   const [heightPct, setHeightPct] = useState(SNAP_DEFAULT);
   const dragStartY = useRef<number | null>(null);
   const dragStartH = useRef<number>(SNAP_DEFAULT);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { setHeightPct(SNAP_DEFAULT); }, [appMode]);
+  useEffect(() => {
+    setHeightPct(SNAP_DEFAULT);
+  }, [appMode]);
 
   const getClientY = (e: React.TouchEvent | React.MouseEvent) =>
     "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
@@ -250,7 +258,10 @@ function MobileBottomSheet({ children, appMode }: { children: React.ReactNode; a
     const containerH = containerRef.current.parentElement!.clientHeight;
     const dy = dragStartY.current - getClientY(e);
     const deltaPct = (dy / containerH) * 100;
-    const next = Math.min(85, Math.max(SNAP_MIN, dragStartH.current + deltaPct));
+    const next = Math.min(
+      85,
+      Math.max(SNAP_MIN, dragStartH.current + deltaPct),
+    );
     setHeightPct(next);
   };
 
@@ -258,7 +269,9 @@ function MobileBottomSheet({ children, appMode }: { children: React.ReactNode; a
     if (dragStartY.current === null) return;
     dragStartY.current = null;
     const snaps = [SNAP_MIN, SNAP_DEFAULT, SNAP_MID];
-    const closest = snaps.reduce((a, b) => Math.abs(a - heightPct) < Math.abs(b - heightPct) ? a : b);
+    const closest = snaps.reduce((a, b) =>
+      Math.abs(a - heightPct) < Math.abs(b - heightPct) ? a : b,
+    );
     setHeightPct(closest);
   };
 
@@ -266,7 +279,10 @@ function MobileBottomSheet({ children, appMode }: { children: React.ReactNode; a
     <div
       ref={containerRef}
       className="md:hidden absolute bottom-0 left-0 right-0 bg-ponto-dark rounded-t-2xl shadow-2xl z-20 flex flex-col"
-      style={{ height: `${heightPct}%`, transition: dragStartY.current === null ? "height 0.25s ease" : "none" }}
+      style={{
+        height: `${heightPct}%`,
+        transition: dragStartY.current === null ? "height 0.25s ease" : "none",
+      }}
     >
       <div
         className="flex justify-center items-center py-3 cursor-grab active:cursor-grabbing shrink-0"
@@ -280,9 +296,7 @@ function MobileBottomSheet({ children, appMode }: { children: React.ReactNode; a
       >
         <div className="w-10 h-1 bg-ponto-muted/60 rounded-full" />
       </div>
-      <div className="flex-1 overflow-y-auto px-4 pb-6">
-        {children}
-      </div>
+      <div className="flex-1 overflow-y-auto px-4 pb-6">{children}</div>
     </div>
   );
 }
@@ -328,6 +342,9 @@ function App() {
   const [customNodeId, setCustomNodeId] = useState<string>("");
   const animationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null,
+  );
+  const [currentAugmentingPath, setCurrentAugmentingPath] = useState<Edge[]>(
+    [],
   );
   const stepsRef = useRef<any[]>([]);
   const currentStepRef = useRef<number>(0);
@@ -424,6 +441,7 @@ function App() {
     setFwJ(null);
     setFfFlows({});
     setFfMaxFlow(0);
+    setCurrentAugmentingPath([]);
     //setFfAugmentingEdges(new Set());
   };
 
@@ -549,6 +567,11 @@ function App() {
         setFfFlows(step.flowState);
       if (step.maxFlow !== undefined && selectedAlgo === "FORD_FULKERSON")
         setFfMaxFlow(step.maxFlow);
+      if (step.type === "find-path" && step.pathEdges) {
+        setCurrentAugmentingPath(step.pathEdges);
+      } else if (step.type === "augment" || step.type === "done") {
+        setCurrentAugmentingPath([]);
+      }
 
       /*if (step.type === "augment" && step.pathEdges) {
         setFfAugmentingEdges((prev) => {
@@ -860,7 +883,9 @@ function App() {
 
     if (activeTool === "select-rotation") {
       if (selectedNodesForRotation.includes(nodeId)) {
-        setSelectedNodesForRotation(selectedNodesForRotation.filter((id) => id !== nodeId));
+        setSelectedNodesForRotation(
+          selectedNodesForRotation.filter((id) => id !== nodeId),
+        );
         return;
       }
       if (selectedNodesForRotation.length < 3) {
@@ -906,7 +931,9 @@ function App() {
     setErrorNodesForRotation([]);
 
     if (selectedNodesForRotation.length !== 3) {
-      setErrorMessage(`Selecione exatamente 3 nós no grafo antes de aplicar a rotação. Você selecionou ${selectedNodesForRotation.length}.`);
+      setErrorMessage(
+        `Selecione exatamente 3 nós no grafo antes de aplicar a rotação. Você selecionou ${selectedNodesForRotation.length}.`,
+      );
       return;
     }
 
@@ -917,7 +944,11 @@ function App() {
     if (!n0 || !n1 || !n2) return;
 
     const hasEdge = (a: number, b: number) =>
-      edges.some((e) => (e.sourceId === a && e.targetId === b) || (!isDirected && e.sourceId === b && e.targetId === a));
+      edges.some(
+        (e) =>
+          (e.sourceId === a && e.targetId === b) ||
+          (!isDirected && e.sourceId === b && e.targetId === a),
+      );
 
     const ids = [id0, id1, id2];
     let rootId: number | null = null;
@@ -932,7 +963,9 @@ function App() {
     }
 
     if (rootId === null) {
-      setErrorMessage("Os 3 nós selecionados não formam uma sub-árvore válida. A raiz deve estar conectada aos outros dois nós.");
+      setErrorMessage(
+        "Os 3 nós selecionados não formam uma sub-árvore válida. A raiz deve estar conectada aos outros dois nós.",
+      );
       setErrorNodesForRotation(selectedNodesForRotation);
       return;
     }
@@ -949,11 +982,15 @@ function App() {
     let detectedType: string | null = null;
     if (leftVal < rootVal && rightVal < leftVal) detectedType = "LL";
     else if (rightVal > rootVal && leftVal > rightVal) detectedType = "RR";
-    else if (leftVal < rootVal && rightVal > leftVal && rightVal < rootVal) detectedType = "LR";
-    else if (rightVal > rootVal && leftVal < rightVal && leftVal > rootVal) detectedType = "RL";
+    else if (leftVal < rootVal && rightVal > leftVal && rightVal < rootVal)
+      detectedType = "LR";
+    else if (rightVal > rootVal && leftVal < rightVal && leftVal > rootVal)
+      detectedType = "RL";
 
     if (detectedType === null) {
-      setErrorMessage("Não foi possível identificar o tipo de desequilíbrio AVL nos nós selecionados. Verifique os valores dos nós.");
+      setErrorMessage(
+        "Não foi possível identificar o tipo de desequilíbrio AVL nos nós selecionados. Verifique os valores dos nós.",
+      );
       setErrorNodesForRotation(selectedNodesForRotation);
       return;
     }
@@ -965,7 +1002,9 @@ function App() {
         LR: "LR (rotação dupla esquerda-direita) — filho esquerdo com neto direito",
         RL: "RL (rotação dupla direita-esquerda) — filho direito com neto esquerdo",
       };
-      setErrorMessage(`Rotação incorreta! O desequilíbrio detectado é ${descriptions[detectedType]}, não ${type}.`);
+      setErrorMessage(
+        `Rotação incorreta! O desequilíbrio detectado é ${descriptions[detectedType]}, não ${type}.`,
+      );
       setErrorNodesForRotation(selectedNodesForRotation);
       return;
     }
@@ -974,13 +1013,15 @@ function App() {
     const subNodes = [root, leftChild, rightChild];
     const { updatedNodes, updatedEdges } = performBalancedRotation(subNodes);
 
-    setNodes(nodes.map((n) => {
-      const updated = updatedNodes.find((u: any) => u.id === n.id);
-      return updated ? updated : n;
-    }));
+    setNodes(
+      nodes.map((n) => {
+        const updated = updatedNodes.find((u: any) => u.id === n.id);
+        return updated ? updated : n;
+      }),
+    );
 
     const nonSelectedEdges = edges.filter(
-      (e) => !ids.includes(e.sourceId) || !ids.includes(e.targetId)
+      (e) => !ids.includes(e.sourceId) || !ids.includes(e.targetId),
     );
     setEdges([...nonSelectedEdges, ...updatedEdges]);
 
@@ -1078,7 +1119,9 @@ function App() {
               connectionSourceId={connectionSourceId}
               dynamicLevel={dynamicLevel}
               themeId={selectedThemeId}
-              selectedAlgo={appMode === "game" ? dynamicLevel?.algo : selectedAlgo}
+              selectedAlgo={
+                appMode === "game" ? dynamicLevel?.algo : selectedAlgo
+              }
               onCanvasMouseDown={handleCanvasMouseDown}
               onCanvasMouseMove={handleCanvasMouseMove}
               onCanvasMouseUp={handleCanvasMouseUp}
@@ -1090,11 +1133,14 @@ function App() {
               onCanvasClick={handleCanvasClick}
               onNodeMouseDown={handleNodeMouseDown}
               onNodeClick={handleNodeClick}
-              onEdgeClick={(index) => setEdges(edges.filter((_, i) => i !== index))}
+              onEdgeClick={(index) =>
+                setEdges(edges.filter((_, i) => i !== index))
+              }
               evaluatingEdge={evaluatingEdge}
               ffFlows={ffFlows}
               bfNegativeCycleEdges={bfNegativeCycleEdges}
-              isRotating={activeTool === 'select-rotation'}
+              isRotating={activeTool === "select-rotation"}
+              currentAugmentingPath={currentAugmentingPath}
             />
 
             <aside className="hidden md:flex flex-col w-80 h-full absolute right-0 top-0 bg-ponto-dark border-l border-ponto-muted/50 p-6 shadow-xl z-10 gap-6 overflow-y-auto">
@@ -1147,7 +1193,12 @@ function App() {
                 />
               ) : (
                 <GameSidebar
-                  levelConfigs={selectedThemeId ? GAME_THEMES.find((t) => t.id === selectedThemeId)!.levels : []}
+                  levelConfigs={
+                    selectedThemeId
+                      ? GAME_THEMES.find((t) => t.id === selectedThemeId)!
+                          .levels
+                      : []
+                  }
                   currentLevelIndex={currentLevelIndex}
                   dynamicLevel={dynamicLevel}
                   lives={lives}
@@ -1160,11 +1211,20 @@ function App() {
                   handleRotationGameChallenge={(type) => {
                     if (dynamicLevel?.algo !== "AVL") return;
                     if (type === dynamicLevel.expectedRotation) {
-                      const sortedNodes = [...nodes].sort((a, b) => parseInt(a.label) - parseInt(b.label));
+                      const sortedNodes = [...nodes].sort(
+                        (a, b) => parseInt(a.label) - parseInt(b.label),
+                      );
                       if (sortedNodes.length === 3) {
                         const [left, root, right] = sortedNodes;
-                        setNodes([{ ...left, x: 250, y: 220 }, { ...root, x: 350, y: 120 }, { ...right, x: 450, y: 220 }]);
-                        setEdges([{ sourceId: root.id, targetId: left.id, weight: 1 }, { sourceId: root.id, targetId: right.id, weight: 1 }]);
+                        setNodes([
+                          { ...left, x: 250, y: 220 },
+                          { ...root, x: 350, y: 120 },
+                          { ...right, x: 450, y: 220 },
+                        ]);
+                        setEdges([
+                          { sourceId: root.id, targetId: left.id, weight: 1 },
+                          { sourceId: root.id, targetId: right.id, weight: 1 },
+                        ]);
                       }
                       setGameStatus("won");
                     } else {
@@ -1226,7 +1286,12 @@ function App() {
                 />
               ) : (
                 <GameSidebar
-                  levelConfigs={selectedThemeId ? GAME_THEMES.find((t) => t.id === selectedThemeId)!.levels : []}
+                  levelConfigs={
+                    selectedThemeId
+                      ? GAME_THEMES.find((t) => t.id === selectedThemeId)!
+                          .levels
+                      : []
+                  }
                   currentLevelIndex={currentLevelIndex}
                   dynamicLevel={dynamicLevel}
                   lives={lives}
@@ -1239,11 +1304,20 @@ function App() {
                   handleRotationGameChallenge={(type) => {
                     if (dynamicLevel?.algo !== "AVL") return;
                     if (type === dynamicLevel.expectedRotation) {
-                      const sortedNodes = [...nodes].sort((a, b) => parseInt(a.label) - parseInt(b.label));
+                      const sortedNodes = [...nodes].sort(
+                        (a, b) => parseInt(a.label) - parseInt(b.label),
+                      );
                       if (sortedNodes.length === 3) {
                         const [left, root, right] = sortedNodes;
-                        setNodes([{ ...left, x: 250, y: 220 }, { ...root, x: 350, y: 120 }, { ...right, x: 450, y: 220 }]);
-                        setEdges([{ sourceId: root.id, targetId: left.id, weight: 1 }, { sourceId: root.id, targetId: right.id, weight: 1 }]);
+                        setNodes([
+                          { ...left, x: 250, y: 220 },
+                          { ...root, x: 350, y: 120 },
+                          { ...right, x: 450, y: 220 },
+                        ]);
+                        setEdges([
+                          { sourceId: root.id, targetId: left.id, weight: 1 },
+                          { sourceId: root.id, targetId: right.id, weight: 1 },
+                        ]);
                       }
                       setGameStatus("won");
                     } else {
