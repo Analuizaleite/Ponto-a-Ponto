@@ -147,23 +147,26 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         <defs>
           <marker
             id="arrowhead"
-            markerWidth="10"
-            markerHeight="7"
-            refX="28"
-            refY="3.5"
+            markerWidth="8"
+            markerHeight="5"
+            refX="25"
+            refY="2.5"
             orient="auto"
           >
-            <polygon points="0 0, 10 3.5, 0 7" fill="#3aebb9" opacity="0.8" />
+            <polygon points="0 0, 8 2.5, 0 5" fill="#3aebb9" opacity="0.8" />
           </marker>
           <marker
             id="arrowhead-highlight"
-            markerWidth="10"
-            markerHeight="7"
-            refX="28"
-            refY="3.5"
+            markerWidth="8"
+            markerHeight="5"
+            refX="25"
+            refY="2.5"
             orient="auto"
           >
-            <polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b" />
+            <polygon points="0 0, 8 2.5, 0 5" fill="#f59e0b" />
+          </marker>
+          <marker id="arrowhead-small">
+            markerEnd={isDirected ? (themeId === "crises" ? "url(#arrowhead-small)" : "url(#arrowhead)") : undefined}
           </marker>
         </defs>
 
