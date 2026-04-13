@@ -12,4 +12,4 @@ export interface Edge {
 }
 
 export type AppMode = 'sandbox' | 'game';
-export type ActiveTool = 'cursor' | 'add-node' | 'add-edge' | 'delete' | 'select-rotation';
+export type ActiveTool = 'cursor' | 'add-node' | 'add-edge' | 'delete';

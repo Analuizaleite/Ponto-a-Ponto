@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Play, Pause, Square } from "lucide-react";
 import type { Node, Edge } from "../types";
-import type { Dispatch, SetStateAction } from "react";
 
 export const ALGORITHM_MODULES: Record<
   string,
@@ -55,11 +54,6 @@ export interface SandboxSidebarProps {
   onPlay: () => void;
   onPause: () => void;
   onStop: () => void;
-  setErrorNodesForRotation: (nodes: number[]) => void;
-  errorMessage: string;
-  setErrorMessage: (msg: string) => void;
-  handleManualRotation: (type: "LL" | "RR" | "LR" | "RL") => void;
-  activeTool: string;
   mstTotalWeight: number;
   dijkstraDistances: Record<number, number>;
   dijkstraPrevious: Record<number, number | null>;
@@ -78,8 +72,6 @@ export interface SandboxSidebarProps {
   fwI: number | null;
   fwJ: number | null;
   ffMaxFlow: number;
-  selectedNodesForRotation: number[];
-  setSelectedNodesForRotation: Dispatch<SetStateAction<number[]>>;
 }
 
 export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
@@ -98,9 +90,6 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   onPlay,
   onPause,
   onStop,
-  handleManualRotation,
-  activeTool,
-  errorMessage,
   mstTotalWeight,
   dijkstraDistances,
   dijkstraPrevious,
@@ -583,48 +572,6 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {activeTool === "select-rotation" && (
-        <div className="border-t border-ponto-muted/30 pt-4">
-          <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-1">
-            Rotações AVL
-          </h2>
-          <p className="text-[11px] text-slate-400 mb-3">
-            Clique em 3 nós no grafo para selecioná-los, depois aplique a rotação.
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => handleManualRotation("LL")}
-              className="bg-ponto-darker hover:bg-ponto-muted text-white border border-ponto-muted/50 rounded p-2 text-xs font-bold"
-            >
-              LL (Dir)
-            </button>
-            <button
-              onClick={() => handleManualRotation("RR")}
-              className="bg-ponto-darker hover:bg-ponto-muted text-white border border-ponto-muted/50 rounded p-2 text-xs font-bold"
-            >
-              RR (Esq)
-            </button>
-            <button
-              onClick={() => handleManualRotation("LR")}
-              className="bg-ponto-darker hover:bg-ponto-muted text-white border border-ponto-muted/50 rounded p-2 text-xs font-bold"
-            >
-              LR (Esq-Dir)
-            </button>
-            <button
-              onClick={() => handleManualRotation("RL")}
-              className="bg-ponto-darker hover:bg-ponto-muted text-white border border-ponto-muted/50 rounded p-2 text-xs font-bold"
-            >
-              RL (Dir-Esq)
-            </button>
-          </div>
-          {errorMessage && (
-            <div className="bg-red-500/20 border border-red-500/40 text-red-200 text-xs p-3 rounded mt-3 leading-relaxed">
-              ⚠️ {errorMessage}
-            </div>
-          )}
         </div>
       )}
 

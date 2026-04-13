@@ -3,7 +3,6 @@ import {
   Circle,
   MousePointer2,
   MoveUpRight,
-  RotateCcw,
   ArrowRightLeft,
   ArrowRight,
   Eraser,
@@ -103,20 +102,6 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Eraser size={18} />
               </button>
-              <button
-                onClick={() => setActiveTool("select-rotation")}
-                disabled={true} 
-                className={`p-1.5 rounded transition-colors 
-    ${
-      activeTool === "select-rotation"
-        ? "bg-ponto-accent text-ponto-darker"
-        : "text-slate-300 hover:bg-ponto-muted/50"
-    }
-    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent`}
-                title="Selecionar nós para rotação"
-              >
-                <RotateCcw size={18} />
-              </button>
             </div>
             <button
               onClick={() => {
@@ -172,20 +157,6 @@ export const Header: React.FC<HeaderProps> = ({
               title="Apagar"
             >
               <Eraser size={18} />
-            </button>
-            <button
-              onClick={() => setActiveTool("select-rotation")}
-              disabled={true}
-              className={`p-1.5 rounded transition-colors 
-    ${
-      activeTool === "select-rotation"
-        ? "bg-ponto-accent text-ponto-darker"
-        : "text-slate-300 hover:bg-ponto-muted/50"
-    }
-    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent`}
-              title="Selecionar nós para rotação"
-            >
-              <RotateCcw size={18} />
             </button>
           </div>
           <button

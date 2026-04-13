@@ -135,29 +135,4 @@ export const GAME_THEMES: GameTheme[] = [
       },
     ],
   },
-  {
-    id: "arvores",
-    title: "A Colheita de Maçãs",
-    algorithms: "Rotações AVL",
-    icon: "🍎",
-    color: "bg-emerald-500",
-    description:
-      "Mantenha a árvore saudável balanceando o peso das maçãs nos galhos.",
-    levels: [
-      {
-        id: "avl_1",
-        algo: "AVL",
-        name: "Missão 1: O Galho Torto",
-        description:
-          "Identifique para onde a árvore está pendendo e aplique a rotação.",
-        story: {
-          context:
-            "O galho principal da nossa Árvore de Indexação está prestes a quebrar! As maçãs mais pesadas nasceram todas na mesma ponta.",
-          objective:
-            "Verifique a distribuição do peso em gramas (g) e aplique a rotação de jardinagem perfeita para endireitar o tronco.",
-          rule: "Árvores AVL: Pesa à Esquerda-Esquerda? Faça Rotação Direita (LL). Pesa à Esquerda-Direita? Rotação Dupla (LR).",
-        },
-      },
-    ],
-  },
 ];

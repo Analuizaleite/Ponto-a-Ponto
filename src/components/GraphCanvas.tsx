@@ -11,9 +11,6 @@ interface GraphCanvasProps {
   queueNodes: Set<number>;
   visitedEdges: Set<string>;
   evaluatingEdge?: Edge | null;
-  selectedNodesForRotation: number[];
-  errorNodesForRotation: number[];
-  isRotating?: boolean;
   connectionSourceId: number | null;
   dynamicLevel: any;
   themeId?: string | null;
@@ -47,9 +44,6 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   queueNodes,
   visitedEdges,
   evaluatingEdge,
-  selectedNodesForRotation,
-  errorNodesForRotation,
-  isRotating,
   connectionSourceId: _connectionSourceId,
   dynamicLevel,
   themeId,
@@ -105,12 +99,6 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         icon: isStart ? "🚰" : isTarget ? "🏙️" : "💧",
         bgClass: "fill-cyan-950",
         borderClass: "stroke-cyan-500",
-      };
-    if (themeId === "arvores")
-      return {
-        icon: "🍎",
-        bgClass: "fill-emerald-500",
-        borderClass: "stroke-white",
       };
 
     return {
@@ -273,22 +261,10 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               const ludic = getLudicNodeVisuals(node.id);
               const isVisited = visitedNodes.has(node.id);
               const isQueue = queueNodes.has(node.id);
-              const isSelectedForRotation =
-                isRotating && selectedNodesForRotation.includes(node.id);
-              const isErrorRotation =
-                isRotating && errorNodesForRotation.includes(node.id);
 
               let fillColor = ludic.bgClass;
-              if (isErrorRotation) fillColor = "fill-red-500";
-              else if (isSelectedForRotation) fillColor = "fill-yellow-400";
-              else if (isVisited) fillColor = "fill-ponto-accent";
+              if (isVisited) fillColor = "fill-ponto-accent";
               else if (isQueue) fillColor = "fill-ponto-muted";
-
-              const borderClass = isErrorRotation
-                ? "stroke-red-300"
-                : isSelectedForRotation
-                  ? "stroke-yellow-200"
-                  : ludic.borderClass;
 
               return (
                 <g
@@ -297,20 +273,11 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                   onClick={(e) => onNodeClick(e, node.id)}
                   className="cursor-pointer group"
                 >
-                  {isSelectedForRotation && (
-                    <circle
-                      cx={node.x}
-                      cy={node.y}
-                      r={30}
-                      className="fill-yellow-400/20 stroke-yellow-400 stroke-[2px]"
-                      strokeDasharray="4 3"
-                    />
-                  )}
                   <circle
                     cx={node.x}
                     cy={node.y}
                     r={24}
-                    className={`stroke-[3px] transition-colors duration-300 ${fillColor} ${borderClass} drop-shadow-md`}
+                    className={`stroke-[3px] transition-colors duration-300 ${fillColor}`}
                   />
                   {ludic.icon && (
                     <text
@@ -349,7 +316,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                         y={node.y}
                         dy=".35em"
                         textAnchor="middle"
-                        className={`font-bold text-sm pointer-events-none select-none ${ludic.icon ? "hidden" : isVisited && !isSelectedForRotation && !isErrorRotation ? "fill-ponto-darker" : "fill-white"}`}
+                        className={`font-bold text-sm pointer-events-none select-none ${ludic.icon ? "hidden" : isVisited ? "fill-ponto-darker" : "fill-white"}`}
                       >
                         {node.label}
                       </text>

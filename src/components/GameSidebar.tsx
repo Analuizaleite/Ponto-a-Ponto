@@ -22,7 +22,6 @@ export interface GameSidebarProps {
   resetGame: () => void;
   nextLevel: () => void;
   onReturnToHub: () => void;
-  handleRotationGameChallenge: (type: "LL" | "RR" | "LR" | "RL") => void;
 }
 
 export const GameSidebar: React.FC<GameSidebarProps> = ({
@@ -32,8 +31,7 @@ export const GameSidebar: React.FC<GameSidebarProps> = ({
   playerPath,
   resetGame,
   nextLevel,
-  onReturnToHub,
-  handleRotationGameChallenge,
+  onReturnToHub
 }) => {
   const [mobileCard, setMobileCard] = useState<"situacao" | "alvo" | "regra" | null>("situacao");
 
@@ -127,27 +125,6 @@ export const GameSidebar: React.FC<GameSidebarProps> = ({
                   <p className="p-3 text-sm text-slate-300 leading-relaxed">{card.content}</p>
                 </div>
               ))}
-
-              {dynamicLevel.algo === "AVL" ? (
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button onClick={() => handleRotationGameChallenge("LL")} className="bg-[#05272d] border border-emerald-500/30 p-2 rounded text-xs font-bold text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors uppercase">Rot. Direita (LL)</button>
-                  <button onClick={() => handleRotationGameChallenge("RR")} className="bg-[#05272d] border border-emerald-500/30 p-2 rounded text-xs font-bold text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors uppercase">Rot. Esquerda (RR)</button>
-                  <button onClick={() => handleRotationGameChallenge("LR")} className="bg-[#05272d] border border-blue-500/30 p-2 rounded text-xs font-bold text-blue-400 hover:bg-blue-500 hover:text-white transition-colors uppercase">Dupla Dir. (LR)</button>
-                  <button onClick={() => handleRotationGameChallenge("RL")} className="bg-[#05272d] border border-blue-500/30 p-2 rounded text-xs font-bold text-blue-400 hover:bg-blue-500 hover:text-white transition-colors uppercase">Dupla Esq. (RL)</button>
-                </div>
-              ) : (
-                <div className="mt-4 flex flex-col gap-2 bg-[#05272d] border border-ponto-accent/20 p-3 rounded-lg shadow-md">
-                  <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="text-slate-400">Progresso da Rota:</span>
-                    <span className="text-ponto-accent font-bold text-sm">{playerPath.length} / {dynamicLevel.expectedVisits?.length || 0}</span>
-                  </div>
-                  <div className="text-xs text-slate-300 font-mono break-words leading-relaxed mt-1">
-                    {playerPath.length > 0
-                      ? playerPath.map((id) => `Nó ${id}`).join(" ➔ ")
-                      : <span className="text-slate-500 italic">Aguardando o clique no Início...</span>}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -239,7 +216,7 @@ export const GameSidebar: React.FC<GameSidebarProps> = ({
           </div>
         )}
 
-        {gameStatus === "playing" && dynamicLevel.algo !== "AVL" && (
+        {gameStatus === "playing" && (
           <div className="mx-3 mb-2 flex items-center justify-between bg-[#05272d] border border-ponto-accent/20 px-3 py-2 rounded-lg text-xs font-mono">
             <span className="text-slate-400">Rota:</span>
             <span className="text-slate-300 truncate mx-2 flex-1">
@@ -248,15 +225,6 @@ export const GameSidebar: React.FC<GameSidebarProps> = ({
                 : <span className="text-slate-500 italic">Clique no nó inicial...</span>}
             </span>
             <span className="text-ponto-accent font-bold shrink-0">{playerPath.length}/{dynamicLevel.expectedVisits?.length || 0}</span>
-          </div>
-        )}
-
-        {gameStatus === "playing" && dynamicLevel.algo === "AVL" && (
-          <div className="grid grid-cols-2 gap-2 mx-3 mb-2">
-            <button onClick={() => handleRotationGameChallenge("LL")} className="bg-[#05272d] border border-emerald-500/30 p-2 rounded text-xs font-bold text-emerald-400">Rot. Direita (LL)</button>
-            <button onClick={() => handleRotationGameChallenge("RR")} className="bg-[#05272d] border border-emerald-500/30 p-2 rounded text-xs font-bold text-emerald-400">Rot. Esquerda (RR)</button>
-            <button onClick={() => handleRotationGameChallenge("LR")} className="bg-[#05272d] border border-blue-500/30 p-2 rounded text-xs font-bold text-blue-400">Dupla Dir. (LR)</button>
-            <button onClick={() => handleRotationGameChallenge("RL")} className="bg-[#05272d] border border-blue-500/30 p-2 rounded text-xs font-bold text-blue-400">Dupla Esq. (RL)</button>
           </div>
         )}
 

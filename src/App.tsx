@@ -20,7 +20,6 @@ import { generateKruskalSteps } from "./algorithms/kruskal";
 import { generateBellmanFordSteps } from "./algorithms/bellmanFord";
 import { generateFloydWarshallSteps } from "./algorithms/floydWarshall";
 import { generateFordFulkersonSteps } from "./algorithms/fordFulkersonBFS";
-import { performBalancedRotation } from "./algorithms/avl";
 
 // --- FUNÇÃO AUXILIAR PARA O FORD-FULKERSON ---
 const checkResidualPathExists = (
@@ -48,41 +47,6 @@ const checkResidualPathExists = (
     }
   }
   return false;
-};
-
-// --- GERADOR ESPECÍFICO PARA ÁRVORES AVL ---
-const generateAVLScenario = () => {
-  const types = ["LL", "RR", "LR", "RL"];
-  const expectedRotation = types[Math.floor(Math.random() * types.length)];
-  const nodes: Node[] = [];
-  const edges: Edge[] = [];
-
-  let vals: number[] = [];
-  if (expectedRotation === "LL") vals = [30, 20, 10];
-  if (expectedRotation === "RR") vals = [10, 20, 30];
-  if (expectedRotation === "LR") vals = [30, 10, 20];
-  if (expectedRotation === "RL") vals = [10, 30, 20];
-
-  nodes.push({ id: 0, label: vals[0].toString(), x: 350, y: 120 });
-
-  if (expectedRotation === "LL") {
-    nodes.push({ id: 1, label: vals[1].toString(), x: 250, y: 220 });
-    nodes.push({ id: 2, label: vals[2].toString(), x: 150, y: 320 });
-  } else if (expectedRotation === "RR") {
-    nodes.push({ id: 1, label: vals[1].toString(), x: 450, y: 220 });
-    nodes.push({ id: 2, label: vals[2].toString(), x: 550, y: 320 });
-  } else if (expectedRotation === "LR") {
-    nodes.push({ id: 1, label: vals[1].toString(), x: 250, y: 220 });
-    nodes.push({ id: 2, label: vals[2].toString(), x: 350, y: 320 });
-  } else if (expectedRotation === "RL") {
-    nodes.push({ id: 1, label: vals[1].toString(), x: 450, y: 220 });
-    nodes.push({ id: 2, label: vals[2].toString(), x: 350, y: 320 });
-  }
-
-  edges.push({ sourceId: 0, targetId: 1, weight: 1 });
-  edges.push({ sourceId: 1, targetId: 2, weight: 1 });
-
-  return { nodes, edges, expectedRotation, algo: "AVL", isDirected: true };
 };
 
 // --- MOTOR DE GERAÇÃO DINÂMICA ---
@@ -146,8 +110,6 @@ const generateRandomGraph = (
 };
 
 const generateDynamicLevel = (algo: string) => {
-  if (algo === "AVL") return generateAVLScenario();
-
   const numNodes =
     algo === "DIJKSTRA" || algo === "FORD_FULKERSON" || algo === "PRIM" ? 6 : 5;
   const isWeighted = ["DIJKSTRA", "PRIM", "FORD_FULKERSON"].includes(algo);
@@ -386,26 +348,11 @@ function App() {
   /*const [setFfAugmentingEdges] = useState<Set<string>>(
     new Set(),
   );*/
-  const [selectedNodesForRotation, setSelectedNodesForRotation] = useState<
-    number[]
-  >([]);
-  const [errorNodesForRotation, setErrorNodesForRotation] = useState<number[]>(
-    [],
-  );
-  const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 3000);
     return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    if (activeTool !== "select-rotation") {
-      setSelectedNodesForRotation([]);
-      setErrorNodesForRotation([]);
-      setErrorMessage("");
-    }
-  }, [activeTool]);
 
   useEffect(() => {
     if (appMode === "game") {
@@ -460,8 +407,7 @@ function App() {
       let startNode, targetNode;
       if (
         selectedAlgo !== "KRUSKAL" &&
-        selectedAlgo !== "FLOYD_WARSHALL" &&
-        selectedAlgo !== "AVL"
+        selectedAlgo !== "FLOYD_WARSHALL"
       ) {
         const isFF = selectedAlgo === "FORD_FULKERSON";
         const searchStart = startNodeId.trim();
@@ -636,9 +582,6 @@ function App() {
     stopAnimation();
     setNodes([]);
     setEdges([]);
-    setSelectedNodesForRotation([]);
-    setErrorNodesForRotation([]);
-    setErrorMessage("");
     setTransform({ x: 0, y: 0, k: 1 });
   };
 
@@ -773,8 +716,7 @@ function App() {
     if (appMode === "game") {
       if (
         gameStatus !== "playing" ||
-        !dynamicLevel ||
-        dynamicLevel.algo === "AVL"
+        !dynamicLevel
       )
         return;
 
@@ -881,19 +823,6 @@ function App() {
       return;
     }
 
-    if (activeTool === "select-rotation") {
-      if (selectedNodesForRotation.includes(nodeId)) {
-        setSelectedNodesForRotation(
-          selectedNodesForRotation.filter((id) => id !== nodeId),
-        );
-        return;
-      }
-      if (selectedNodesForRotation.length < 3) {
-        setSelectedNodesForRotation([...selectedNodesForRotation, nodeId]);
-      }
-      return;
-    }
-
     if (activeTool === "delete") {
       setNodes(nodes.filter((n) => n.id !== nodeId));
       setEdges(
@@ -924,109 +853,6 @@ function App() {
         setConnectionSourceId(null);
       }
     }
-  };
-
-  const handleManualRotation = (type: "LL" | "RR" | "LR" | "RL") => {
-    setErrorMessage("");
-    setErrorNodesForRotation([]);
-
-    if (selectedNodesForRotation.length !== 3) {
-      setErrorMessage(
-        `Selecione exatamente 3 nós no grafo antes de aplicar a rotação. Você selecionou ${selectedNodesForRotation.length}.`,
-      );
-      return;
-    }
-
-    const [id0, id1, id2] = selectedNodesForRotation;
-    const n0 = nodes.find((n) => n.id === id0);
-    const n1 = nodes.find((n) => n.id === id1);
-    const n2 = nodes.find((n) => n.id === id2);
-    if (!n0 || !n1 || !n2) return;
-
-    const hasEdge = (a: number, b: number) =>
-      edges.some(
-        (e) =>
-          (e.sourceId === a && e.targetId === b) ||
-          (!isDirected && e.sourceId === b && e.targetId === a),
-      );
-
-    const ids = [id0, id1, id2];
-    let rootId: number | null = null;
-    let childIds: number[] = [];
-    for (const candidate of ids) {
-      const others = ids.filter((x) => x !== candidate);
-      if (others.every((o) => hasEdge(candidate, o))) {
-        rootId = candidate;
-        childIds = others;
-        break;
-      }
-    }
-
-    if (rootId === null) {
-      setErrorMessage(
-        "Os 3 nós selecionados não formam uma sub-árvore válida. A raiz deve estar conectada aos outros dois nós.",
-      );
-      setErrorNodesForRotation(selectedNodesForRotation);
-      return;
-    }
-
-    const root = nodes.find((n) => n.id === rootId)!;
-    const [c0, c1] = childIds.map((id) => nodes.find((n) => n.id === id)!);
-    const leftChild = c0.x < c1.x ? c0 : c1;
-    const rightChild = c0.x < c1.x ? c1 : c0;
-
-    const leftVal = parseInt(leftChild.label);
-    const rightVal = parseInt(rightChild.label);
-    const rootVal = parseInt(root.label);
-
-    let detectedType: string | null = null;
-    if (leftVal < rootVal && rightVal < leftVal) detectedType = "LL";
-    else if (rightVal > rootVal && leftVal > rightVal) detectedType = "RR";
-    else if (leftVal < rootVal && rightVal > leftVal && rightVal < rootVal)
-      detectedType = "LR";
-    else if (rightVal > rootVal && leftVal < rightVal && leftVal > rootVal)
-      detectedType = "RL";
-
-    if (detectedType === null) {
-      setErrorMessage(
-        "Não foi possível identificar o tipo de desequilíbrio AVL nos nós selecionados. Verifique os valores dos nós.",
-      );
-      setErrorNodesForRotation(selectedNodesForRotation);
-      return;
-    }
-
-    if (type !== detectedType) {
-      const descriptions: Record<string, string> = {
-        LL: "LL (rotação simples à direita) — filho esquerdo com neto esquerdo",
-        RR: "RR (rotação simples à esquerda) — filho direito com neto direito",
-        LR: "LR (rotação dupla esquerda-direita) — filho esquerdo com neto direito",
-        RL: "RL (rotação dupla direita-esquerda) — filho direito com neto esquerdo",
-      };
-      setErrorMessage(
-        `Rotação incorreta! O desequilíbrio detectado é ${descriptions[detectedType]}, não ${type}.`,
-      );
-      setErrorNodesForRotation(selectedNodesForRotation);
-      return;
-    }
-
-    // Aplica a rotação visual nos 3 nós selecionados
-    const subNodes = [root, leftChild, rightChild];
-    const { updatedNodes, updatedEdges } = performBalancedRotation(subNodes);
-
-    setNodes(
-      nodes.map((n) => {
-        const updated = updatedNodes.find((u: any) => u.id === n.id);
-        return updated ? updated : n;
-      }),
-    );
-
-    const nonSelectedEdges = edges.filter(
-      (e) => !ids.includes(e.sourceId) || !ids.includes(e.targetId),
-    );
-    setEdges([...nonSelectedEdges, ...updatedEdges]);
-
-    setSelectedNodesForRotation([]);
-    setErrorNodesForRotation([]);
   };
 
   if (showSplash)
@@ -1114,8 +940,6 @@ function App() {
               visitedNodes={visitedNodes}
               queueNodes={queueNodes}
               visitedEdges={visitedEdges}
-              selectedNodesForRotation={selectedNodesForRotation}
-              errorNodesForRotation={errorNodesForRotation}
               connectionSourceId={connectionSourceId}
               dynamicLevel={dynamicLevel}
               themeId={selectedThemeId}
@@ -1139,7 +963,6 @@ function App() {
               evaluatingEdge={evaluatingEdge}
               ffFlows={ffFlows}
               bfNegativeCycleEdges={bfNegativeCycleEdges}
-              isRotating={activeTool === "select-rotation"}
               currentAugmentingPath={currentAugmentingPath}
             />
 
@@ -1165,13 +988,6 @@ function App() {
                   onPlay={playAnimation}
                   onPause={pauseAnimation}
                   onStop={stopAnimation}
-                  selectedNodesForRotation={selectedNodesForRotation}
-                  setSelectedNodesForRotation={setSelectedNodesForRotation}
-                  setErrorNodesForRotation={setErrorNodesForRotation}
-                  errorMessage={errorMessage}
-                  setErrorMessage={setErrorMessage}
-                  handleManualRotation={handleManualRotation}
-                  activeTool={activeTool}
                   mstTotalWeight={mstTotalWeight}
                   dijkstraDistances={dijkstraDistances}
                   dijkstraPrevious={dijkstraPrevious}
@@ -1208,30 +1024,6 @@ function App() {
                   resetGame={resetGame}
                   nextLevel={nextLevel}
                   onReturnToHub={() => setGamePhase("HUB")}
-                  handleRotationGameChallenge={(type) => {
-                    if (dynamicLevel?.algo !== "AVL") return;
-                    if (type === dynamicLevel.expectedRotation) {
-                      const sortedNodes = [...nodes].sort(
-                        (a, b) => parseInt(a.label) - parseInt(b.label),
-                      );
-                      if (sortedNodes.length === 3) {
-                        const [left, root, right] = sortedNodes;
-                        setNodes([
-                          { ...left, x: 250, y: 220 },
-                          { ...root, x: 350, y: 120 },
-                          { ...right, x: 450, y: 220 },
-                        ]);
-                        setEdges([
-                          { sourceId: root.id, targetId: left.id, weight: 1 },
-                          { sourceId: root.id, targetId: right.id, weight: 1 },
-                        ]);
-                      }
-                      setGameStatus("won");
-                    } else {
-                      setLives((l) => l - 1);
-                      if (lives - 1 <= 0) setGameStatus("lost");
-                    }
-                  }}
                 />
               )}
             </aside>
@@ -1258,13 +1050,6 @@ function App() {
                   onPlay={playAnimation}
                   onPause={pauseAnimation}
                   onStop={stopAnimation}
-                  selectedNodesForRotation={selectedNodesForRotation}
-                  setSelectedNodesForRotation={setSelectedNodesForRotation}
-                  setErrorNodesForRotation={setErrorNodesForRotation}
-                  errorMessage={errorMessage}
-                  setErrorMessage={setErrorMessage}
-                  handleManualRotation={handleManualRotation}
-                  activeTool={activeTool}
                   mstTotalWeight={mstTotalWeight}
                   dijkstraDistances={dijkstraDistances}
                   dijkstraPrevious={dijkstraPrevious}
@@ -1301,30 +1086,6 @@ function App() {
                   resetGame={resetGame}
                   nextLevel={nextLevel}
                   onReturnToHub={() => setGamePhase("HUB")}
-                  handleRotationGameChallenge={(type) => {
-                    if (dynamicLevel?.algo !== "AVL") return;
-                    if (type === dynamicLevel.expectedRotation) {
-                      const sortedNodes = [...nodes].sort(
-                        (a, b) => parseInt(a.label) - parseInt(b.label),
-                      );
-                      if (sortedNodes.length === 3) {
-                        const [left, root, right] = sortedNodes;
-                        setNodes([
-                          { ...left, x: 250, y: 220 },
-                          { ...root, x: 350, y: 120 },
-                          { ...right, x: 450, y: 220 },
-                        ]);
-                        setEdges([
-                          { sourceId: root.id, targetId: left.id, weight: 1 },
-                          { sourceId: root.id, targetId: right.id, weight: 1 },
-                        ]);
-                      }
-                      setGameStatus("won");
-                    } else {
-                      setLives((l) => l - 1);
-                      if (lives - 1 <= 0) setGameStatus("lost");
-                    }
-                  }}
                 />
               )}
             </MobileBottomSheet>
