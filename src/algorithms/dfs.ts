@@ -10,6 +10,7 @@ export interface DFSStep {
   edge?: Edge;
   tdState?: Record<number, number>;
   ttState?: Record<number, number>;
+  parentState?: Record<number, number | null>;
 }
 
 export function generateDFSSteps(
@@ -27,6 +28,7 @@ export function generateDFSSteps(
   let time = 0;
   const td: Record<number, number> = {};
   const tt: Record<number, number> = {};
+  const parent: Record<number, number | null> = {};
 
   const adjacency: Record<number, Edge[]> = {};
   for (let i = 0; i < nodesCount; i++) adjacency[i] = [];
@@ -61,7 +63,8 @@ export function generateDFSSteps(
     steps.push({
       ...baseData,
       tdState: { ...td },
-      ttState: { ...tt }
+      ttState: { ...tt },
+      parentState: { ...parent }
     });
   };
 
@@ -84,6 +87,7 @@ export function generateDFSSteps(
 
       if (!visited.has(neighborId)) {
         pushStep({ type: 'tree-edge', edge });
+        parent[neighborId] = currentNode;
         pushStep({ type: 'mark', nodeId: neighborId });
         dfsRecursive(neighborId, currentNode);
       } else if (stack.has(neighborId)) {
@@ -99,9 +103,10 @@ export function generateDFSSteps(
   }
 
   pushStep({ type: 'mark', nodeId: startNodeId });
+  parent[startNodeId] = null;
   dfsRecursive(startNodeId);
   
-  steps.push({ type: 'done', tdState: { ...td }, ttState: { ...tt } });
+  steps.push({ type: 'done', tdState: { ...td }, ttState: { ...tt }, parentState: { ...parent } });
 
   return steps;
 }

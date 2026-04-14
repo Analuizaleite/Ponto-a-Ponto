@@ -60,6 +60,7 @@ export interface SandboxSidebarProps {
   dijkstraPrevious: Record<number, number | null>;
   dfsTD: Record<number, number>;
   dfsTT: Record<number, number>;
+  dfsPai: Record<number, number | null>;
   bfsL: Record<number, number>;
   bfsNivel: Record<number, number>;
   bfsPai: Record<number, number | null>;
@@ -101,6 +102,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   dijkstraPrevious,
   dfsTD,
   dfsTT,
+  dfsPai,
   bfsL,
   bfsNivel,
   bfsPai,
@@ -273,7 +275,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
 
                     if (neighbors.length === 0) return null;
 
-                    const currentOrder = customAdjacencyOrder[node.id] || neighbors;
+                    const currentOrder = customAdjacencyOrder[node.id] !== undefined ? customAdjacencyOrder[node.id] : [];
 
                     return (
                       <div key={node.id} className="mb-2 p-2 bg-ponto-darker/50 rounded border border-ponto-muted/30">
@@ -688,9 +690,10 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                     <td className="p-2 font-mono text-purple-400">
                       {dfsTT[n.id] ?? "-"}
                     </td>
-                    {/*Adicionar o pai */} 
                     <td className="p-2 font-mono text-yellow-500">
-                      {dfsTT[n.id] ?? "-"}
+                      {dfsPai[n.id] !== undefined && dfsPai[n.id] !== null 
+                        ? nodes.find(node => node.id === dfsPai[n.id])?.label ?? dfsPai[n.id]
+                        : "-"}
                     </td>
                   </tr>
                 ))}

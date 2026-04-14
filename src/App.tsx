@@ -357,6 +357,7 @@ function App() {
   const [bfNegativeCycleEdges, setBfNegativeCycleEdges] = useState<Edge[]>([]);
   const [dfsTD, setDfsTD] = useState<Record<number, number>>({});
   const [dfsTT, setDfsTT] = useState<Record<number, number>>({});
+  const [dfsPai, setDfsPai] = useState<Record<number, number | null>>({});
   const [bfsL, setBfsL] = useState<Record<number, number>>({});
   const [bfsNivel, setBfsNivel] = useState<Record<number, number>>({});
   const [bfsPai, setBfsPai] = useState<Record<number, number | null>>({});
@@ -512,6 +513,7 @@ function App() {
         setDijkstraPrevious(step.previousState);
       if (step.tdState) setDfsTD(step.tdState);
       if (step.ttState) setDfsTT(step.ttState);
+      if (step.parentState) setDfsPai(step.parentState);
       if (step.lState) setBfsL(step.lState);
       if (step.nivelState) setBfsNivel(step.nivelState);
       if (step.paiState) setBfsPai(step.paiState);
@@ -1037,6 +1039,7 @@ function App() {
                   dijkstraPrevious={dijkstraPrevious}
                   dfsTD={dfsTD}
                   dfsTT={dfsTT}
+                  dfsPai={dfsPai}
                   bfsL={bfsL}
                   bfsNivel={bfsNivel}
                   bfsPai={bfsPai}
@@ -1104,6 +1107,7 @@ function App() {
                   dijkstraPrevious={dijkstraPrevious}
                   dfsTD={dfsTD}
                   dfsTT={dfsTT}
+                  dfsPai={dfsPai}
                   bfsL={bfsL}
                   bfsNivel={bfsNivel}
                   bfsPai={bfsPai}
