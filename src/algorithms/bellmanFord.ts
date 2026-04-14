@@ -111,7 +111,6 @@ export function generateBellmanFordSteps(
     if (distances[u] !== Infinity && distances[u] + w < distances[v]) {
       hasNegativeCycle = true;
 
-      // Reconstruir o ciclo negativo
       negativeCycleEdges = reconstructNegativeCycle(previous, v, edgeList);
 
       pushStep({

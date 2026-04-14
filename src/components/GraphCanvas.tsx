@@ -18,6 +18,8 @@ interface GraphCanvasProps {
   bfNegativeCycleEdges?: Edge[];
   selectedAlgo?: string;
   currentAugmentingPath?: Edge[];
+  dfsTreeEdges?: Set<string>;
+  dfsBackEdges?: Set<string>;
 
   transform: { x: number; y: number; k: number };
   onCanvasMouseDown: (e: React.MouseEvent | React.TouchEvent) => void;
@@ -50,7 +52,9 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   ffFlows,
   bfNegativeCycleEdges,
   selectedAlgo,
-  currentAugmentingPath = [], 
+  currentAugmentingPath = [],
+  dfsTreeEdges = new Set(),
+  dfsBackEdges = new Set(),
   transform,
   onCanvasMouseDown,
   onCanvasMouseMove,
@@ -169,6 +173,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
               const edgeKey = `${Math.min(s.id, t.id)}-${Math.max(s.id, t.id)}`;
               const isVisitedEdge = visitedEdges.has(edgeKey);
+              const isTreeEdge = selectedAlgo === "DFS" && dfsTreeEdges.has(edgeKey);
+              const isBackEdge = selectedAlgo === "DFS" && dfsBackEdges.has(edgeKey);
 
               const isAugmenting = currentAugmentingPath.some(
                 (ae) =>
@@ -201,17 +207,22 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
               const baseStyle = getBaseEdgeStyle();
 
-              const lineColor = isAugmenting
-                ? "#3B82F6"
-                : isEvaluating
-                  ? "#f59e0b"
-                  : isNegativeCycleEdge
-                    ? "#ef4444"
-                    : isVisitedEdge
-                      ? "#3aebb9"
-                      : baseStyle.color;
+              const lineColor = isBackEdge
+                ? "#ef4444"
+                : isTreeEdge
+                  ? "#3aebb9"
+                  : isAugmenting
+                    ? "#3B82F6"
+                    : isEvaluating
+                      ? "#f59e0b"
+                      : isNegativeCycleEdge
+                        ? "#ef4444"
+                        : isVisitedEdge
+                          ? "#3aebb9"
+                          : baseStyle.color;
 
               const lineWidth = isAugmenting ? "4" : baseStyle.width;
+              const lineDash = isBackEdge ? "8 4" : undefined;
               const midX = (s.x + t.x) / 2;
               const midY = (s.y + t.y) / 2;
 
@@ -227,6 +238,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                     y2={t.y}
                     stroke={lineColor}
                     strokeWidth={lineWidth}
+                    strokeDasharray={lineDash}
                     markerEnd={isDirected ? "url(#arrowhead)" : undefined}
                     className={`transition-all duration-300`}
                   />
@@ -263,7 +275,11 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               const isQueue = queueNodes.has(node.id);
 
               let fillColor = ludic.bgClass;
-              if (isVisited) fillColor = "fill-ponto-accent";
+              if (selectedAlgo === "DFS" && appMode !== "game") {
+                fillColor = "fill-blue-700";
+                if (isVisited) fillColor = "fill-cyan-300";
+                else if (isQueue) fillColor = "fill-emerald-800";
+              } else if (isVisited) fillColor = "fill-ponto-accent";
               else if (isQueue) fillColor = "fill-ponto-muted";
 
               return (

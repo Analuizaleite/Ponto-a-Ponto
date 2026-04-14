@@ -38,6 +38,7 @@ export interface SandboxSidebarProps {
   nodes: Node[];
   edges: Edge[];
   isDirected: boolean;
+  adjacency: Record<string, Edge[]>;
   customNodeId: string;
   setCustomNodeId: (id: string) => void;
   selectedAlgo: string;
@@ -72,12 +73,17 @@ export interface SandboxSidebarProps {
   fwI: number | null;
   fwJ: number | null;
   ffMaxFlow: number;
+  dfsSortStrategy: 'ascending' | 'custom';
+  setDfsSortStrategy: (strategy: 'ascending' | 'custom') => void;
+  customAdjacencyOrder: Record<number, number[]>;
+  setCustomAdjacencyOrder: (order: Record<number, number[]>) => void;
 }
 
 export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   nodes,
   edges,
   isDirected,
+  adjacency,
   customNodeId,
   setCustomNodeId,
   selectedAlgo,
@@ -107,6 +113,10 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   fwI,
   fwJ,
   ffMaxFlow,
+  dfsSortStrategy,
+  setDfsSortStrategy,
+  customAdjacencyOrder,
+  setCustomAdjacencyOrder,
 }) => {
   const [selectedModule, setSelectedModule] = useState<string>("buscas");
   const isRunning = animationStatus === "playing";
@@ -216,6 +226,157 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
               ))}
             </select>
           </div>
+
+          {selectedAlgo === "DFS" && (
+            <div className="flex flex-col gap-3 bg-ponto-muted/20 p-3 rounded-md border border-ponto-muted/40">
+              <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                Estratégia de Ordenação:
+              </label>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-ponto-accent transition-colors">
+                  <input
+                    type="radio"
+                    name="dfsSortStrategy"
+                    value="ascending"
+                    checked={dfsSortStrategy === 'ascending'}
+                    onChange={(e) => setDfsSortStrategy(e.target.value as 'ascending')}
+                    disabled={!isIdle}
+                    className="cursor-pointer"
+                  />
+                  <span>Ordem Alfabética/Crescente da lista de adjacência (padrão)</span>
+                </label>
+                <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-ponto-accent transition-colors">
+                  <input
+                    type="radio"
+                    name="dfsSortStrategy"
+                    value="custom"
+                    checked={dfsSortStrategy === 'custom'}
+                    onChange={(e) => setDfsSortStrategy(e.target.value as 'custom')}
+                    disabled={!isIdle}
+                    className="cursor-pointer"
+                  />
+                  <span>Personalizado (você configura)</span>
+                </label>
+              </div>
+              <p className="text-[10px] text-slate-500 italic">
+                Define qual vizinho é explorado primeiro em cada nó.
+              </p>
+
+              {dfsSortStrategy === 'custom' && (
+                <div className="border-t border-ponto-muted/50 pt-2 mt-2">
+                  <p className="text-[10px] text-slate-400 font-bold mb-2 uppercase tracking-wider">
+                    Ordem de Vizinhos por Nó:
+                  </p>
+                  {nodes.map((node) => {
+                    const nodeAdjacency = adjacency[node.id.toString()] || [];
+                    const neighbors = nodeAdjacency.map((e) => e.targetId);
+
+                    if (neighbors.length === 0) return null;
+
+                    const currentOrder = customAdjacencyOrder[node.id] || neighbors;
+
+                    return (
+                      <div key={node.id} className="mb-2 p-2 bg-ponto-darker/50 rounded border border-ponto-muted/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs text-ponto-accent font-bold">
+                            Nó {node.label}
+                          </p>
+                        </div>
+
+                        <input
+                          type="text"
+                          placeholder="Clique nos nós abaixo para criar a ordem"
+                          value={currentOrder.map(id => nodes.find(n => n.id === id)?.label || id).join(',')}
+                          onChange={(e) => {
+                            const input = e.target.value.trim();
+                            if (input) {
+                              const parts = input.split(',').map((part) => part.trim());
+                              const newOrder: number[] = [];
+                              
+                              for (const part of parts) {
+                                let id: number | undefined;
+                                
+                                const asNumber = parseInt(part);
+                                if (!isNaN(asNumber) && neighbors.includes(asNumber)) {
+                                  id = asNumber;
+                                } else {
+                 
+                                  const foundNode = nodes.find(n => n.label.toLowerCase() === part.toLowerCase() && neighbors.includes(n.id));
+                                  if (foundNode) {
+                                    id = foundNode.id;
+                                  }
+                                }
+                                
+                                if (id !== undefined) {
+                                  newOrder.push(id);
+                                }
+                              }
+                              
+                              if (new Set(newOrder).size === newOrder.length && newOrder.every(id => neighbors.includes(id))) {
+                                setCustomAdjacencyOrder({
+                                  ...customAdjacencyOrder,
+                                  [node.id]: newOrder,
+                                });
+                              }
+                            } else {
+    
+                              setCustomAdjacencyOrder({
+                                ...customAdjacencyOrder,
+                                [node.id]: neighbors,
+                              });
+                            }
+                          }}
+                          disabled={!isIdle}
+                          className="w-full bg-ponto-darker text-xs text-slate-200 border border-ponto-muted/50 rounded px-2 py-1 focus:outline-none focus:border-ponto-accent disabled:opacity-50 mb-2"
+                        />
+
+                        <p className="text-[9px] text-slate-400 mb-1">Clique nos nós adjacentes  para adicionar à ordem:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {neighbors.map((neighborId) => {
+                            const neighborLabel = nodes.find((n) => n.id === neighborId)?.label || neighborId.toString();
+                            const isInOrder = currentOrder.includes(neighborId);
+                            const orderPosition = isInOrder ? currentOrder.indexOf(neighborId) + 1 : null;
+                            
+                            return (
+                              <button
+                                key={neighborId}
+                                onClick={() => {
+
+                                  const newOrder = [...currentOrder];
+                                  const idx = newOrder.indexOf(neighborId);
+                                  
+                                  if (idx === -1) {
+    
+                                    newOrder.push(neighborId);
+                                  } else {
+                                    newOrder.splice(idx, 1);
+                                  }
+
+                                  setCustomAdjacencyOrder({
+                                    ...customAdjacencyOrder,
+                                    [node.id]: newOrder,
+                                  });
+                                }}
+                                disabled={!isIdle}
+                                className={`px-3 py-1.5 rounded border transition-all text-[10px] font-bold ${
+                                  isInOrder
+                                    ? "bg-ponto-accent/30 border-ponto-accent text-ponto-accent"
+                                    : "bg-ponto-darker border-ponto-muted/50 text-slate-300 hover:border-ponto-accent"
+                                } disabled:opacity-50 cursor-pointer`}
+                              >
+                                {neighborLabel}
+                                {orderPosition && <span className="ml-1 text-[8px]">({orderPosition})</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {selectedAlgo !== "KRUSKAL" && selectedAlgo !== "FLOYD_WARSHALL" && (
             <div className="flex flex-col gap-3">
@@ -502,7 +663,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
       {selectedAlgo === "DFS" && Object.keys(dfsTD).length > 0 && (
         <div className="border-t border-ponto-muted/30 pt-4">
           <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
-            Tempos da Busca (DFS)
+            Tempos de Busca (DFS)
           </h2>
           <div className="bg-ponto-darker rounded-lg border border-ponto-muted p-2 shadow-inner">
             <table className="w-full text-xs text-left text-slate-300">
@@ -511,6 +672,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                   <th className="p-2">Vértice</th>
                   <th className="p-2 text-[#3aebb9]">TD</th>
                   <th className="p-2 text-purple-400">TT</th>
+                  <th className="p-2 text-yellow-500">pai</th>
                 </tr>
               </thead>
               <tbody>
@@ -526,10 +688,54 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                     <td className="p-2 font-mono text-purple-400">
                       {dfsTT[n.id] ?? "-"}
                     </td>
+                    {/*Adicionar o pai */} 
+                    <td className="p-2 font-mono text-yellow-500">
+                      {dfsTT[n.id] ?? "-"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {selectedAlgo === "DFS" && (
+        <div className="border-t border-ponto-muted/30 pt-4">
+          <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
+            Legenda DFS
+          </h2>
+          <div className="bg-ponto-darker rounded-lg border border-ponto-muted/40 p-4 shadow-inner space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="w-4 h-4 rounded-full bg-blue-600 border border-slate-700" />
+              <span className="text-xs text-slate-300">Vértice não explorado</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="w-4 h-4 rounded-full bg-emerald-800 border border-slate-700" />
+              <span className="text-xs text-slate-300">Vértice marcado</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="w-4 h-4 rounded-full bg-cyan-300 border border-slate-700" />
+              <span className="text-xs text-slate-300">Vértice explorado</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-slate-400" />
+              </span>
+              <span className="text-xs text-slate-300">Aresta não explorada</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-red-500 border-dashed border-b-2 border-red-500" />
+              </span>
+              <span className="text-xs text-slate-300">Aresta de retorno</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-cyan-300" />
+              </span>
+              <span className="text-xs text-slate-300">Aresta de árvore</span>
+            </div>
           </div>
         </div>
       )}

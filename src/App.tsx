@@ -49,6 +49,28 @@ const checkResidualPathExists = (
   return false;
 };
 
+// --- FUNÇÃO PARA CONSTRUIR LISTA DE ADJACÊNCIA ---
+const buildAdjacencyList = (edges: Edge[], isDirected: boolean): Record<string, Edge[]> => {
+  const adjacency: Record<string, Edge[]> = {};
+  for (const edge of edges) {
+    if (!adjacency[edge.sourceId.toString()]) {
+      adjacency[edge.sourceId.toString()] = [];
+    }
+    adjacency[edge.sourceId.toString()].push(edge);
+    if (!isDirected) {
+      if (!adjacency[edge.targetId.toString()]) {
+        adjacency[edge.targetId.toString()] = [];
+      }
+      adjacency[edge.targetId.toString()].push({
+        ...edge,
+        sourceId: edge.targetId,
+        targetId: edge.sourceId,
+      });
+    }
+  }
+  return adjacency;
+};
+
 // --- MOTOR DE GERAÇÃO DINÂMICA ---
 const generateRandomGraph = (
   numNodes: number,
@@ -297,6 +319,8 @@ function App() {
   const [targetNodeId, setTargetNodeId] = useState<string>("");
   const [flowSourceId, setFlowSourceId] = useState<string>("");
   const [flowSinkId, setFlowSinkId] = useState<string>("");
+  const [dfsSortStrategy, setDfsSortStrategy] = useState<'ascending' | 'custom'>('ascending');
+  const [customAdjacencyOrder, setCustomAdjacencyOrder] = useState<Record<number, number[]>>({});
 
   const [animationStatus, setAnimationStatus] = useState<
     "idle" | "playing" | "paused"
@@ -314,6 +338,8 @@ function App() {
   const [visitedNodes, setVisitedNodes] = useState<Set<number>>(new Set());
   const [queueNodes, setQueueNodes] = useState<Set<number>>(new Set());
   const [visitedEdges, setVisitedEdges] = useState<Set<string>>(new Set());
+  const [dfsTreeEdges, setDfsTreeEdges] = useState<Set<string>>(new Set());
+  const [dfsBackEdges, setDfsBackEdges] = useState<Set<string>>(new Set());
   const [evaluatingEdge, setEvaluatingEdge] = useState<Edge | null>(null);
   const [mstTotalWeight, setMstTotalWeight] = useState<number>(0);
   const [dijkstraDistances, setDijkstraDistances] = useState<
@@ -367,6 +393,8 @@ function App() {
     setVisitedNodes(new Set());
     setQueueNodes(new Set());
     setVisitedEdges(new Set());
+    setDfsTreeEdges(new Set());
+    setDfsBackEdges(new Set());
     setEvaluatingEdge(null);
     setMstTotalWeight(0);
     setDijkstraDistances({});
@@ -438,7 +466,7 @@ function App() {
       if (selectedAlgo === "BFS")
         steps = generateBFSSteps(startId, nodesCount, edges, isDirected);
       else if (selectedAlgo === "DFS")
-        steps = generateDFSSteps(startId, nodesCount, edges, isDirected);
+        steps = generateDFSSteps(startId, nodesCount, edges, isDirected, dfsSortStrategy, customAdjacencyOrder);
       else if (selectedAlgo === "DIJKSTRA")
         steps = generateDijkstraSteps(startId, nodesCount, edges);
       else if (selectedAlgo === "PRIM")
@@ -545,18 +573,31 @@ function App() {
         setVisitedEdges(newTree);
       }
 
-      if (step.type === "queue" && step.nodeId !== undefined) {
+      if (step.type === "mark" && step.nodeId !== undefined) {
         setQueueNodes((prev) => new Set(prev).add(step.nodeId));
-      } else if (
-        (step.type === "visit" || step.type === "relax") &&
-        step.nodeId !== undefined
-      ) {
+      } else if (step.type === "visit" && step.nodeId !== undefined) {
         setQueueNodes((prev) => {
           const n = new Set(prev);
           n.delete(step.nodeId);
           return n;
         });
         setVisitedNodes((prev) => new Set(prev).add(step.nodeId));
+      } else if (step.type === "tree-edge" && step.edge !== undefined) {
+        const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
+        setDfsTreeEdges((prev) => new Set(prev).add(edgeKey));
+        setVisitedEdges((prev) => {
+          const n = new Set(prev);
+          n.add(edgeKey);
+          return n;
+        });
+      } else if (step.type === "back-edge" && step.edge !== undefined) {
+        const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
+        setDfsBackEdges((prev) => new Set(prev).add(edgeKey));
+        setVisitedEdges((prev) => {
+          const n = new Set(prev);
+          n.add(edgeKey);
+          return n;
+        });
       } else if (step.type === "edge" && step.edge !== undefined) {
         setVisitedEdges((prev) => {
           const n = new Set(prev);
@@ -964,6 +1005,8 @@ function App() {
               ffFlows={ffFlows}
               bfNegativeCycleEdges={bfNegativeCycleEdges}
               currentAugmentingPath={currentAugmentingPath}
+              dfsTreeEdges={dfsTreeEdges}
+              dfsBackEdges={dfsBackEdges}
             />
 
             <aside className="hidden md:flex flex-col w-80 h-full absolute right-0 top-0 bg-ponto-dark border-l border-ponto-muted/50 p-6 shadow-xl z-10 gap-6 overflow-y-auto">
@@ -972,6 +1015,7 @@ function App() {
                   nodes={nodes}
                   edges={edges}
                   isDirected={isDirected}
+                  adjacency={buildAdjacencyList(edges, isDirected)}
                   customNodeId={customNodeId}
                   setCustomNodeId={setCustomNodeId}
                   selectedAlgo={selectedAlgo}
@@ -1006,6 +1050,10 @@ function App() {
                   fwI={fwI}
                   fwJ={fwJ}
                   ffMaxFlow={ffMaxFlow}
+                  dfsSortStrategy={dfsSortStrategy}
+                  setDfsSortStrategy={setDfsSortStrategy}
+                  customAdjacencyOrder={customAdjacencyOrder}
+                  setCustomAdjacencyOrder={setCustomAdjacencyOrder}
                 />
               ) : (
                 <GameSidebar
@@ -1034,6 +1082,7 @@ function App() {
                   nodes={nodes}
                   edges={edges}
                   isDirected={isDirected}
+                  adjacency={buildAdjacencyList(edges, isDirected)}
                   customNodeId={customNodeId}
                   setCustomNodeId={setCustomNodeId}
                   selectedAlgo={selectedAlgo}
@@ -1068,6 +1117,10 @@ function App() {
                   fwI={fwI}
                   fwJ={fwJ}
                   ffMaxFlow={ffMaxFlow}
+                  dfsSortStrategy={dfsSortStrategy}
+                  setDfsSortStrategy={setDfsSortStrategy}
+                  customAdjacencyOrder={customAdjacencyOrder}
+                  setCustomAdjacencyOrder={setCustomAdjacencyOrder}
                 />
               ) : (
                 <GameSidebar
