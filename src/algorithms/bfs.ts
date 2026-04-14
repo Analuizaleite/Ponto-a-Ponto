@@ -5,7 +5,15 @@ export interface Edge {
 }
 
 export interface BFSStep {
-  type: 'visit' | 'queue' | 'edge' | 'done';
+  type:
+    | 'visit'
+    | 'queue'
+    | 'edge'
+    | 'parent-edge'
+    | 'uncle-edge'
+    | 'brother-edge'
+    | 'cousin-edge'
+    | 'done';
   nodeId?: number;
   edge?: Edge;
   lState?: Record<number, number>;
@@ -14,10 +22,12 @@ export interface BFSStep {
 }
 
 export function generateBFSSteps(
-  startNodeId: number, 
-  nodesCount: number, 
+  startNodeId: number,
+  nodesCount: number,
   edges: Edge[],
-  isDirected: boolean
+  isDirected: boolean,
+  sortStrategy: 'ascending' | 'custom' = 'ascending',
+  customAdjacencyOrder?: Record<number, number[]>
 ): BFSStep[] {
   const steps: BFSStep[] = [];
   const visited = new Set<number>();
@@ -38,8 +48,21 @@ export function generateBFSSteps(
     }
   });
 
-  for (let i = 0; i < nodesCount; i++) {
-    adjacency[i].sort((a, b) => a.targetId - b.targetId);
+  if (sortStrategy === 'ascending') {
+    for (let i = 0; i < nodesCount; i++) {
+      adjacency[i].sort((a, b) => a.targetId - b.targetId);
+    }
+  } else if (sortStrategy === 'custom' && customAdjacencyOrder) {
+    for (let i = 0; i < nodesCount; i++) {
+      const desiredOrder = customAdjacencyOrder[i];
+      if (desiredOrder && desiredOrder.length > 0) {
+        adjacency[i].sort((a, b) => {
+          const indexA = desiredOrder.indexOf(a.targetId);
+          const indexB = desiredOrder.indexOf(b.targetId);
+          return (indexA === -1 ? nodesCount : indexA) - (indexB === -1 ? nodesCount : indexB);
+        });
+      }
+    }
   }
 
   const pushStep = (baseData: any) => {
@@ -66,18 +89,38 @@ export function generateBFSSteps(
 
     for (const edge of adjacency[currentId]) {
       const neighborId = edge.targetId;
-      
+
       if (!visited.has(neighborId)) {
         visited.add(neighborId);
-        
+
         lCounter++;
         L[neighborId] = lCounter;
-        nivel[neighborId] = nivel[currentId] + 1; 
+        nivel[neighborId] = nivel[currentId] + 1;
         pai[neighborId] = currentId;
 
-        pushStep({ type: 'edge', edge: edge });
+        pushStep({ type: 'parent-edge', edge });
         pushStep({ type: 'queue', nodeId: neighborId });
         queue.push(neighborId);
+      } else if (!isDirected && neighborId === pai[currentId]) {
+        continue;
+      } else if (nivel[neighborId] === nivel[currentId] + 1) {
+        pushStep({ type: 'uncle-edge', edge });
+      } else if (
+        nivel[neighborId] === nivel[currentId] &&
+        pai[currentId] !== null &&
+        pai[neighborId] !== null &&
+        pai[currentId] === pai[neighborId] &&
+        L[neighborId] > L[currentId]
+      ) {
+        pushStep({ type: 'brother-edge', edge });
+      } else if (
+        nivel[neighborId] === nivel[currentId] &&
+        pai[currentId] !== null &&
+        pai[neighborId] !== null &&
+        pai[currentId] !== pai[neighborId] &&
+        L[neighborId] > L[currentId]
+      ) {
+        pushStep({ type: 'cousin-edge', edge });
       }
     }
   }

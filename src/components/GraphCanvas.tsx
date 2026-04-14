@@ -20,6 +20,10 @@ interface GraphCanvasProps {
   currentAugmentingPath?: Edge[];
   dfsTreeEdges?: Set<string>;
   dfsBackEdges?: Set<string>;
+  bfsParentEdges?: Set<string>;
+  bfsUncleEdges?: Set<string>;
+  bfsBrotherEdges?: Set<string>;
+  bfsCousinEdges?: Set<string>;
 
   transform: { x: number; y: number; k: number };
   onCanvasMouseDown: (e: React.MouseEvent | React.TouchEvent) => void;
@@ -55,6 +59,10 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   currentAugmentingPath = [],
   dfsTreeEdges = new Set(),
   dfsBackEdges = new Set(),
+  bfsParentEdges = new Set(),
+  bfsUncleEdges = new Set(),
+  bfsBrotherEdges = new Set(),
+  bfsCousinEdges = new Set(),
   transform,
   onCanvasMouseDown,
   onCanvasMouseMove,
@@ -175,6 +183,10 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               const isVisitedEdge = visitedEdges.has(edgeKey);
               const isTreeEdge = selectedAlgo === "DFS" && dfsTreeEdges.has(edgeKey);
               const isBackEdge = selectedAlgo === "DFS" && dfsBackEdges.has(edgeKey);
+              const isBfsParentEdge = selectedAlgo === "BFS" && bfsParentEdges.has(edgeKey);
+              const isBfsUncleEdge = selectedAlgo === "BFS" && bfsUncleEdges.has(edgeKey);
+              const isBfsBrotherEdge = selectedAlgo === "BFS" && bfsBrotherEdges.has(edgeKey);
+              const isBfsCousinEdge = selectedAlgo === "BFS" && bfsCousinEdges.has(edgeKey);
 
               const isAugmenting = currentAugmentingPath.some(
                 (ae) =>
@@ -211,15 +223,23 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 ? "#ef4444"
                 : isTreeEdge
                   ? "#3aebb9"
-                  : isAugmenting
-                    ? "#3B82F6"
-                    : isEvaluating
-                      ? "#f59e0b"
-                      : isNegativeCycleEdge
-                        ? "#ef4444"
-                        : isVisitedEdge
-                          ? "#3aebb9"
-                          : baseStyle.color;
+                  : isBfsParentEdge
+                    ? "#3aebb9"
+                    : isBfsBrotherEdge
+                      ? "#facc15"
+                      : isBfsCousinEdge
+                        ? "#a855f7"
+                        : isBfsUncleEdge
+                          ? "#f97316"
+                          : isAugmenting
+                            ? "#3B82F6"
+                            : isEvaluating
+                              ? "#f59e0b"
+                              : isNegativeCycleEdge
+                                ? "#ef4444"
+                                : isVisitedEdge
+                                  ? "#3aebb9"
+                                  : baseStyle.color;
 
               const lineWidth = isAugmenting ? "4" : baseStyle.width;
               const lineDash = isBackEdge ? "8 4" : undefined;
@@ -275,7 +295,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               const isQueue = queueNodes.has(node.id);
 
               let fillColor = ludic.bgClass;
-              if (selectedAlgo === "DFS" && appMode !== "game") {
+              if ((selectedAlgo === "DFS" || selectedAlgo === "BFS") && appMode !== "game") {
                 fillColor = "fill-blue-700";
                 if (isVisited) fillColor = "fill-cyan-300";
                 else if (isQueue) fillColor = "fill-emerald-800";

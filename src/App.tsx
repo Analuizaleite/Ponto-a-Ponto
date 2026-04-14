@@ -321,6 +321,12 @@ function App() {
   const [flowSinkId, setFlowSinkId] = useState<string>("");
   const [dfsSortStrategy, setDfsSortStrategy] = useState<'ascending' | 'custom'>('ascending');
   const [customAdjacencyOrder, setCustomAdjacencyOrder] = useState<Record<number, number[]>>({});
+  const [bfsSortStrategy, setBfsSortStrategy] = useState<'ascending' | 'custom'>('ascending');
+  const [bfsCustomAdjacencyOrder, setBfsCustomAdjacencyOrder] = useState<Record<number, number[]>>({});
+  const [bfsParentEdges, setBfsParentEdges] = useState<Set<string>>(new Set());
+  const [bfsUncleEdges, setBfsUncleEdges] = useState<Set<string>>(new Set());
+  const [bfsBrotherEdges, setBfsBrotherEdges] = useState<Set<string>>(new Set());
+  const [bfsCousinEdges, setBfsCousinEdges] = useState<Set<string>>(new Set());
 
   const [animationStatus, setAnimationStatus] = useState<
     "idle" | "playing" | "paused"
@@ -396,6 +402,10 @@ function App() {
     setVisitedEdges(new Set());
     setDfsTreeEdges(new Set());
     setDfsBackEdges(new Set());
+    setBfsParentEdges(new Set());
+    setBfsUncleEdges(new Set());
+    setBfsBrotherEdges(new Set());
+    setBfsCousinEdges(new Set());
     setEvaluatingEdge(null);
     setMstTotalWeight(0);
     setDijkstraDistances({});
@@ -465,7 +475,7 @@ function App() {
 
       let steps: any[] = [];
       if (selectedAlgo === "BFS")
-        steps = generateBFSSteps(startId, nodesCount, edges, isDirected);
+        steps = generateBFSSteps(startId, nodesCount, edges, isDirected, bfsSortStrategy, bfsCustomAdjacencyOrder);
       else if (selectedAlgo === "DFS")
         steps = generateDFSSteps(startId, nodesCount, edges, isDirected, dfsSortStrategy, customAdjacencyOrder);
       else if (selectedAlgo === "DIJKSTRA")
@@ -517,6 +527,39 @@ function App() {
       if (step.lState) setBfsL(step.lState);
       if (step.nivelState) setBfsNivel(step.nivelState);
       if (step.paiState) setBfsPai(step.paiState);
+      if (step.type === "parent-edge" && step.edge !== undefined) {
+        const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
+        setBfsParentEdges((prev) => new Set(prev).add(edgeKey));
+        setVisitedEdges((prev) => {
+          const next = new Set(prev);
+          next.add(edgeKey);
+          return next;
+        });
+      } else if (step.type === "uncle-edge" && step.edge !== undefined) {
+        const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
+        setBfsUncleEdges((prev) => new Set(prev).add(edgeKey));
+        setVisitedEdges((prev) => {
+          const next = new Set(prev);
+          next.add(edgeKey);
+          return next;
+        });
+      } else if (step.type === "brother-edge" && step.edge !== undefined) {
+        const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
+        setBfsBrotherEdges((prev) => new Set(prev).add(edgeKey));
+        setVisitedEdges((prev) => {
+          const next = new Set(prev);
+          next.add(edgeKey);
+          return next;
+        });
+      } else if (step.type === "cousin-edge" && step.edge !== undefined) {
+        const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
+        setBfsCousinEdges((prev) => new Set(prev).add(edgeKey));
+        setVisitedEdges((prev) => {
+          const next = new Set(prev);
+          next.add(edgeKey);
+          return next;
+        });
+      }
       if (step.distancesState && selectedAlgo === "BELLMAN_FORD")
         setBfDistances(step.distancesState);
       if (step.previousState && selectedAlgo === "BELLMAN_FORD")
@@ -1009,6 +1052,10 @@ function App() {
               currentAugmentingPath={currentAugmentingPath}
               dfsTreeEdges={dfsTreeEdges}
               dfsBackEdges={dfsBackEdges}
+              bfsParentEdges={bfsParentEdges}
+              bfsUncleEdges={bfsUncleEdges}
+              bfsBrotherEdges={bfsBrotherEdges}
+              bfsCousinEdges={bfsCousinEdges}
             />
 
             <aside className="hidden md:flex flex-col w-80 h-full absolute right-0 top-0 bg-ponto-dark border-l border-ponto-muted/50 p-6 shadow-xl z-10 gap-6 overflow-y-auto">
@@ -1057,6 +1104,10 @@ function App() {
                   setDfsSortStrategy={setDfsSortStrategy}
                   customAdjacencyOrder={customAdjacencyOrder}
                   setCustomAdjacencyOrder={setCustomAdjacencyOrder}
+                  bfsSortStrategy={bfsSortStrategy}
+                  setBfsSortStrategy={setBfsSortStrategy}
+                  bfsCustomAdjacencyOrder={bfsCustomAdjacencyOrder}
+                  setBfsCustomAdjacencyOrder={setBfsCustomAdjacencyOrder}
                 />
               ) : (
                 <GameSidebar
@@ -1125,6 +1176,10 @@ function App() {
                   setDfsSortStrategy={setDfsSortStrategy}
                   customAdjacencyOrder={customAdjacencyOrder}
                   setCustomAdjacencyOrder={setCustomAdjacencyOrder}
+                  bfsSortStrategy={bfsSortStrategy}
+                  setBfsSortStrategy={setBfsSortStrategy}
+                  bfsCustomAdjacencyOrder={bfsCustomAdjacencyOrder}
+                  setBfsCustomAdjacencyOrder={setBfsCustomAdjacencyOrder}
                 />
               ) : (
                 <GameSidebar
