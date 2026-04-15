@@ -156,7 +156,7 @@ export const DimacsImportModal: React.FC<DimacsImportModalProps> = ({
                 value={manualInput}
                 onChange={(e) => setManualInput(e.target.value)}
                 disabled={isLoading}
-                placeholder={`5 6
+                placeholder={`                            5 6
                             a b 2
                             a d 2
                             b c 5
@@ -181,7 +181,7 @@ export const DimacsImportModal: React.FC<DimacsImportModalProps> = ({
           <div className="mt-6 p-4 bg-ponto-dark/50 rounded border border-ponto-muted">
             <h3 className="text-slate-100 font-medium mb-2">Exemplo:</h3>
             <pre className="text-xs text-slate-200 font-mono overflow-x-auto">
-              {`5 6
+              {`                5 6
                 a b 2
                 a d 2
                 b c 5
