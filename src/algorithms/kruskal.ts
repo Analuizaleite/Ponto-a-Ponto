@@ -29,6 +29,10 @@ export function generateKruskalSteps(
 ): MSTStep[] {
   const steps: MSTStep[] = [];
   const E_T: Edge[] = [];
+
+  for (let i = 0; i < nodesCount; i++) {
+    steps.push({ type: 'visit', nodeId: i });
+  }
   
   const sortedEdges = [...edges].sort((a, b) => a.weight - b.weight);
   
@@ -38,13 +42,14 @@ export function generateKruskalSteps(
   
   while (E_T.length < nodesCount - 1 && j < sortedEdges.length) {
     const edge = sortedEdges[j];
+    steps.push({ type: 'test-edge', edge });
     
     if (uf.union(edge.sourceId, edge.targetId)) {
       E_T.push(edge);
       
       steps.push({ type: 'edge', edge });
-      steps.push({ type: 'visit', nodeId: edge.sourceId });
-      steps.push({ type: 'visit', nodeId: edge.targetId });
+    } else {
+      steps.push({ type: 'cycle-edge', edge });
     }
     
     j++;

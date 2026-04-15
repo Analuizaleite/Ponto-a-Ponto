@@ -5,7 +5,7 @@ export interface Edge {
 }
 
 export interface MSTStep {
-  type: 'visit' | 'test-edge' | 'edge' | 'done';
+  type: 'visit' | 'test-edge' | 'edge' | 'cycle-edge' | 'done';
   nodeId?: number;
   edge?: Edge;
 }

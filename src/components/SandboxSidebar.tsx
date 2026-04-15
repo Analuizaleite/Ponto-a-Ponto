@@ -770,6 +770,44 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
         </div>
       )}
 
+      {selectedAlgo === "KRUSKAL" && (
+        <div className="border-t border-ponto-muted/30 pt-4">
+          <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
+            Legenda Kruskal
+          </h2>
+          <div className="bg-ponto-darker rounded-lg border border-ponto-muted/40 p-4 shadow-inner space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="w-4 h-4 rounded-full bg-ponto-accent border border-ponto-accent" />
+              <span className="text-xs text-slate-300">Vértice na AGM</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-orange-500" />
+              </span>
+              <span className="text-xs text-slate-300">Aresta em análise</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-[#3aebb9]" />
+              </span>
+              <span className="text-xs text-slate-300">Aresta inserida na AGM</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-red-500" />
+              </span>
+              <span className="text-xs text-slate-300">Aresta que forma ciclo</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-[#2c6455]" />
+              </span>
+              <span className="text-xs text-slate-300">Aresta não explorada</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedAlgo === "DIJKSTRA" &&
         Object.keys(dijkstraDistances).length > 0 && (
           <div className="border-t border-ponto-muted/30 pt-4">

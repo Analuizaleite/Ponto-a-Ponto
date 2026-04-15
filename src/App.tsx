@@ -364,6 +364,7 @@ function App() {
   const [visitedEdges, setVisitedEdges] = useState<Set<string>>(new Set());
   const [dfsTreeEdges, setDfsTreeEdges] = useState<Set<string>>(new Set());
   const [dfsBackEdges, setDfsBackEdges] = useState<Set<string>>(new Set());
+  const [kruskalCycleEdges, setKruskalCycleEdges] = useState<Set<string>>(new Set());
   const [evaluatingEdge, setEvaluatingEdge] = useState<Edge | null>(null);
   const [mstTotalWeight, setMstTotalWeight] = useState<number>(0);
   const [dijkstraDistances, setDijkstraDistances] = useState<
@@ -418,6 +419,7 @@ function App() {
     setVisitedEdges(new Set());
     setDfsTreeEdges(new Set());
     setDfsBackEdges(new Set());
+    setKruskalCycleEdges(new Set());
     setBfsParentEdges(new Set());
     setBfsUncleEdges(new Set());
     setBfsBrotherEdges(new Set());
@@ -536,6 +538,7 @@ function App() {
       step.type === "relax" ||
       step.type === "done" ||
       step.type === "edge" ||
+      step.type === "cycle-edge" ||
       (step.type === "visit" && selectedAlgo === "PRIM")
     )
       setEvaluatingEdge(null);
@@ -575,6 +578,9 @@ function App() {
         n.add(edgeKey);
         return n;
       });
+    } else if (step.type === "cycle-edge" && step.edge !== undefined) {
+      const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
+      setKruskalCycleEdges((prev) => new Set(prev).add(edgeKey));
     } else if (step.type === "edge" && step.edge !== undefined) {
       setVisitedEdges((prev) => {
         const n = new Set(prev);
@@ -1120,6 +1126,7 @@ function App() {
               currentAugmentingPath={currentAugmentingPath}
               dfsTreeEdges={dfsTreeEdges}
               dfsBackEdges={dfsBackEdges}
+              kruskalCycleEdges={kruskalCycleEdges}
               bfsParentEdges={bfsParentEdges}
               bfsUncleEdges={bfsUncleEdges}
               bfsBrotherEdges={bfsBrotherEdges}

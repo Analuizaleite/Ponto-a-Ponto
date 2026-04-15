@@ -20,6 +20,7 @@ interface GraphCanvasProps {
   currentAugmentingPath?: Edge[];
   dfsTreeEdges?: Set<string>;
   dfsBackEdges?: Set<string>;
+  kruskalCycleEdges?: Set<string>;
   bfsParentEdges?: Set<string>;
   bfsUncleEdges?: Set<string>;
   bfsBrotherEdges?: Set<string>;
@@ -59,6 +60,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   currentAugmentingPath = [],
   dfsTreeEdges = new Set(),
   dfsBackEdges = new Set(),
+  kruskalCycleEdges = new Set(),
   bfsParentEdges = new Set(),
   bfsUncleEdges = new Set(),
   bfsBrotherEdges = new Set(),
@@ -183,6 +185,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               const isVisitedEdge = visitedEdges.has(edgeKey);
               const isTreeEdge = selectedAlgo === "DFS" && dfsTreeEdges.has(edgeKey);
               const isBackEdge = selectedAlgo === "DFS" && dfsBackEdges.has(edgeKey);
+              const isKruskalCycleEdge = selectedAlgo === "KRUSKAL" && kruskalCycleEdges.has(edgeKey);
               const isBfsParentEdge = selectedAlgo === "BFS" && bfsParentEdges.has(edgeKey);
               const isBfsUncleEdge = selectedAlgo === "BFS" && bfsUncleEdges.has(edgeKey);
               const isBfsBrotherEdge = selectedAlgo === "BFS" && bfsBrotherEdges.has(edgeKey);
@@ -221,6 +224,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
               const lineColor = isBackEdge
                 ? "#ef4444"
+                : isKruskalCycleEdge
+                  ? "#ef4444"
                 : isTreeEdge
                   ? "#3aebb9"
                   : isBfsParentEdge
