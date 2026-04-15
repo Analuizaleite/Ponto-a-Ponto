@@ -296,7 +296,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
               let fillColor = ludic.bgClass;
               if ((selectedAlgo === "DFS" || selectedAlgo === "BFS") && appMode !== "game") {
-                fillColor = "fill-blue-700";
+                fillColor = "fill-slate-700";
                 if (isVisited) fillColor = "fill-cyan-300";
                 else if (isQueue) fillColor = "fill-emerald-800";
               } else if (isVisited) fillColor = "fill-ponto-accent";

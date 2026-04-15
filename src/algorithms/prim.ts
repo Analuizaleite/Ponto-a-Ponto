@@ -5,7 +5,7 @@ export interface Edge {
 }
 
 export interface MSTStep {
-  type: 'visit' | 'edge' | 'done';
+  type: 'visit' | 'test-edge' | 'edge' | 'done';
   nodeId?: number;
   edge?: Edge;
 }
@@ -38,6 +38,7 @@ export function generatePrimSteps(
       for (const edge of adj[v]) {
         const w = edge.sourceId === v ? edge.targetId : edge.sourceId;
         if (!V_T.has(w)) {
+          steps.push({ type: 'test-edge', edge });
           if (edge.weight < minCost) {
             minCost = edge.weight;
             minEdge = edge;

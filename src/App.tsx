@@ -350,7 +350,7 @@ function App() {
     "idle" | "playing" | "paused"
   >("idle");
   const [customNodeId, setCustomNodeId] = useState<string>("");
-  const animationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+  const animationIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
   const [currentAugmentingPath, setCurrentAugmentingPath] = useState<Edge[]>(
@@ -447,9 +447,173 @@ function App() {
     //setFfAugmentingEdges(new Set());
   };
 
+  const getAnimationDelay = (step: any) => {
+    if (selectedAlgo === "PRIM" && step?.type === "test-edge") {
+      return 1200;
+    }
+
+    return 700;
+  };
+
+  const applyAnimationStep = (step: any) => {
+    if (step.distancesState && selectedAlgo === "DIJKSTRA")
+      setDijkstraDistances(step.distancesState);
+    if (step.previousState && selectedAlgo === "DIJKSTRA")
+      setDijkstraPrevious(step.previousState);
+    if (step.tdState) setDfsTD(step.tdState);
+    if (step.ttState) setDfsTT(step.ttState);
+    if (step.parentState) setDfsPai(step.parentState);
+    if (step.lState) setBfsL(step.lState);
+    if (step.nivelState) setBfsNivel(step.nivelState);
+    if (step.paiState) setBfsPai(step.paiState);
+    if (step.type === "parent-edge" && step.edge !== undefined) {
+      const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
+      setBfsParentEdges((prev) => new Set(prev).add(edgeKey));
+      setVisitedEdges((prev) => {
+        const next = new Set(prev);
+        next.add(edgeKey);
+        return next;
+      });
+    } else if (step.type === "uncle-edge" && step.edge !== undefined) {
+      const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
+      setBfsUncleEdges((prev) => new Set(prev).add(edgeKey));
+      setVisitedEdges((prev) => {
+        const next = new Set(prev);
+        next.add(edgeKey);
+        return next;
+      });
+    } else if (step.type === "brother-edge" && step.edge !== undefined) {
+      const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
+      setBfsBrotherEdges((prev) => new Set(prev).add(edgeKey));
+      setVisitedEdges((prev) => {
+        const next = new Set(prev);
+        next.add(edgeKey);
+        return next;
+      });
+    } else if (step.type === "cousin-edge" && step.edge !== undefined) {
+      const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
+      setBfsCousinEdges((prev) => new Set(prev).add(edgeKey));
+      setVisitedEdges((prev) => {
+        const next = new Set(prev);
+        next.add(edgeKey);
+        return next;
+      });
+    }
+    if (step.distancesState && selectedAlgo === "BELLMAN_FORD")
+      setBfDistances(step.distancesState);
+    if (step.previousState && selectedAlgo === "BELLMAN_FORD")
+      setBfPrevious(step.previousState);
+    if (step.iteration !== undefined) setBfIteration(step.iteration);
+    if (step.hasNegativeCycle !== undefined)
+      setBfHasNegativeCycle(step.hasNegativeCycle);
+    if (step.negativeCycleEdges !== undefined)
+      setBfNegativeCycleEdges(step.negativeCycleEdges);
+    if (step.type === "done" && selectedAlgo === "BELLMAN_FORD") {
+      setBfIteration(bfHasNegativeCycle ? "CICLO NEGATIVO!" : "Concluído");
+    }
+    if (step.distancesState && selectedAlgo === "FLOYD_WARSHALL")
+      setFwDistances(step.distancesState);
+    if (step.previousState && selectedAlgo === "FLOYD_WARSHALL")
+      setFwPrevious(step.previousState);
+    if (step.k !== undefined) setFwK(step.k);
+    else if (step.type === "done" || step.type === "init") setFwK(null);
+    if (step.i !== undefined) setFwI(step.i);
+    else if (step.type === "done" || step.type === "init") setFwI(null);
+    if (step.j !== undefined) setFwJ(step.j);
+    else if (step.type === "done" || step.type === "init") setFwJ(null);
+    if (step.flowState && selectedAlgo === "FORD_FULKERSON")
+      setFfFlows(step.flowState);
+    if (step.maxFlow !== undefined && selectedAlgo === "FORD_FULKERSON")
+      setFfMaxFlow(step.maxFlow);
+    if (step.type === "find-path" && step.pathEdges) {
+      setCurrentAugmentingPath(step.pathEdges);
+    } else if (step.type === "augment" || step.type === "done") {
+      setCurrentAugmentingPath([]);
+    }
+
+    if (step.type === "test-edge" && step.edge) setEvaluatingEdge(step.edge);
+    else if (
+      step.type === "relax" ||
+      step.type === "done" ||
+      step.type === "edge" ||
+      (step.type === "visit" && selectedAlgo === "PRIM")
+    )
+      setEvaluatingEdge(null);
+
+    if (step.treeEdges) {
+      const newTree = new Set<string>();
+      step.treeEdges.forEach((e: any) =>
+        newTree.add(
+          `${Math.min(e.sourceId, e.targetId)}-${Math.max(e.sourceId, e.targetId)}`,
+        ),
+      );
+      setVisitedEdges(newTree);
+    }
+
+    if (step.type === "mark" && step.nodeId !== undefined) {
+      setQueueNodes((prev) => new Set(prev).add(step.nodeId));
+    } else if (step.type === "visit" && step.nodeId !== undefined) {
+      setQueueNodes((prev) => {
+        const n = new Set(prev);
+        n.delete(step.nodeId);
+        return n;
+      });
+      setVisitedNodes((prev) => new Set(prev).add(step.nodeId));
+    } else if (step.type === "tree-edge" && step.edge !== undefined) {
+      const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
+      setDfsTreeEdges((prev) => new Set(prev).add(edgeKey));
+      setVisitedEdges((prev) => {
+        const n = new Set(prev);
+        n.add(edgeKey);
+        return n;
+      });
+    } else if (step.type === "back-edge" && step.edge !== undefined) {
+      const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
+      setDfsBackEdges((prev) => new Set(prev).add(edgeKey));
+      setVisitedEdges((prev) => {
+        const n = new Set(prev);
+        n.add(edgeKey);
+        return n;
+      });
+    } else if (step.type === "edge" && step.edge !== undefined) {
+      setVisitedEdges((prev) => {
+        const n = new Set(prev);
+        n.add(
+          `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`,
+        );
+        return n;
+      });
+      if (selectedAlgo === "PRIM" || selectedAlgo === "KRUSKAL")
+        setMstTotalWeight((prev) => prev + step.edge!.weight);
+    }
+  };
+
+  const scheduleNextAnimationStep = () => {
+    if (currentStepRef.current >= stepsRef.current.length) {
+      setAnimationStatus("idle");
+      return;
+    }
+
+    const step = stepsRef.current[currentStepRef.current];
+    const delay = getAnimationDelay(step);
+
+    animationIntervalRef.current = setTimeout(() => {
+      if (currentStepRef.current >= stepsRef.current.length) {
+        setAnimationStatus("idle");
+        return;
+      }
+
+      const nextStep = stepsRef.current[currentStepRef.current];
+      applyAnimationStep(nextStep);
+      currentStepRef.current++;
+      scheduleNextAnimationStep();
+    }, delay);
+  };
+
   const stopAnimation = () => {
     if (animationIntervalRef.current)
-      clearInterval(animationIntervalRef.current);
+      clearTimeout(animationIntervalRef.current);
+    animationIntervalRef.current = null;
     setAnimationStatus("idle");
     currentStepRef.current = 0;
     stepsRef.current = [];
@@ -518,165 +682,20 @@ function App() {
         );
 
       if (animationIntervalRef.current)
-        clearInterval(animationIntervalRef.current);
+        clearTimeout(animationIntervalRef.current);
       resetVisualState();
       stepsRef.current = steps;
       currentStepRef.current = 0;
     }
 
     setAnimationStatus("playing");
-    animationIntervalRef.current = setInterval(() => {
-      if (currentStepRef.current >= stepsRef.current.length) {
-        clearInterval(animationIntervalRef.current!);
-        setAnimationStatus("idle");
-        return;
-      }
-      const step = stepsRef.current[currentStepRef.current];
-
-      if (step.distancesState && selectedAlgo === "DIJKSTRA")
-        setDijkstraDistances(step.distancesState);
-      if (step.previousState && selectedAlgo === "DIJKSTRA")
-        setDijkstraPrevious(step.previousState);
-      if (step.tdState) setDfsTD(step.tdState);
-      if (step.ttState) setDfsTT(step.ttState);
-      if (step.parentState) setDfsPai(step.parentState);
-      if (step.lState) setBfsL(step.lState);
-      if (step.nivelState) setBfsNivel(step.nivelState);
-      if (step.paiState) setBfsPai(step.paiState);
-      if (step.type === "parent-edge" && step.edge !== undefined) {
-        const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
-        setBfsParentEdges((prev) => new Set(prev).add(edgeKey));
-        setVisitedEdges((prev) => {
-          const next = new Set(prev);
-          next.add(edgeKey);
-          return next;
-        });
-      } else if (step.type === "uncle-edge" && step.edge !== undefined) {
-        const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
-        setBfsUncleEdges((prev) => new Set(prev).add(edgeKey));
-        setVisitedEdges((prev) => {
-          const next = new Set(prev);
-          next.add(edgeKey);
-          return next;
-        });
-      } else if (step.type === "brother-edge" && step.edge !== undefined) {
-        const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
-        setBfsBrotherEdges((prev) => new Set(prev).add(edgeKey));
-        setVisitedEdges((prev) => {
-          const next = new Set(prev);
-          next.add(edgeKey);
-          return next;
-        });
-      } else if (step.type === "cousin-edge" && step.edge !== undefined) {
-        const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
-        setBfsCousinEdges((prev) => new Set(prev).add(edgeKey));
-        setVisitedEdges((prev) => {
-          const next = new Set(prev);
-          next.add(edgeKey);
-          return next;
-        });
-      }
-      if (step.distancesState && selectedAlgo === "BELLMAN_FORD")
-        setBfDistances(step.distancesState);
-      if (step.previousState && selectedAlgo === "BELLMAN_FORD")
-        setBfPrevious(step.previousState);
-      if (step.iteration !== undefined) setBfIteration(step.iteration);
-      if (step.hasNegativeCycle !== undefined)
-        setBfHasNegativeCycle(step.hasNegativeCycle);
-      if (step.negativeCycleEdges !== undefined)
-        setBfNegativeCycleEdges(step.negativeCycleEdges);
-      if (step.type === "done" && selectedAlgo === "BELLMAN_FORD") {
-        setBfIteration(bfHasNegativeCycle ? "CICLO NEGATIVO!" : "Concluído");
-      }
-      if (step.distancesState && selectedAlgo === "FLOYD_WARSHALL")
-        setFwDistances(step.distancesState);
-      if (step.previousState && selectedAlgo === "FLOYD_WARSHALL")
-        setFwPrevious(step.previousState);
-      if (step.k !== undefined) setFwK(step.k);
-      else if (step.type === "done" || step.type === "init") setFwK(null);
-      if (step.i !== undefined) setFwI(step.i);
-      else if (step.type === "done" || step.type === "init") setFwI(null);
-      if (step.j !== undefined) setFwJ(step.j);
-      else if (step.type === "done" || step.type === "init") setFwJ(null);
-      if (step.flowState && selectedAlgo === "FORD_FULKERSON")
-        setFfFlows(step.flowState);
-      if (step.maxFlow !== undefined && selectedAlgo === "FORD_FULKERSON")
-        setFfMaxFlow(step.maxFlow);
-      if (step.type === "find-path" && step.pathEdges) {
-        setCurrentAugmentingPath(step.pathEdges);
-      } else if (step.type === "augment" || step.type === "done") {
-        setCurrentAugmentingPath([]);
-      }
-
-      /*if (step.type === "augment" && step.pathEdges) {
-        setFfAugmentingEdges((prev) => {
-          const next = new Set(prev);
-          step.pathEdges.forEach((e: Edge) =>
-            next.add(
-              `${Math.min(e.sourceId, e.targetId)}-${Math.max(e.sourceId, e.targetId)}`,
-            ),
-          );
-          return next;
-        });
-      }*/
-
-      if (step.type === "test-edge" && step.edge) setEvaluatingEdge(step.edge);
-      else if (step.type === "relax" || step.type === "done")
-        setEvaluatingEdge(null);
-
-      if (step.treeEdges) {
-        const newTree = new Set<string>();
-        step.treeEdges.forEach((e: any) =>
-          newTree.add(
-            `${Math.min(e.sourceId, e.targetId)}-${Math.max(e.sourceId, e.targetId)}`,
-          ),
-        );
-        setVisitedEdges(newTree);
-      }
-
-      if (step.type === "mark" && step.nodeId !== undefined) {
-        setQueueNodes((prev) => new Set(prev).add(step.nodeId));
-      } else if (step.type === "visit" && step.nodeId !== undefined) {
-        setQueueNodes((prev) => {
-          const n = new Set(prev);
-          n.delete(step.nodeId);
-          return n;
-        });
-        setVisitedNodes((prev) => new Set(prev).add(step.nodeId));
-      } else if (step.type === "tree-edge" && step.edge !== undefined) {
-        const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
-        setDfsTreeEdges((prev) => new Set(prev).add(edgeKey));
-        setVisitedEdges((prev) => {
-          const n = new Set(prev);
-          n.add(edgeKey);
-          return n;
-        });
-      } else if (step.type === "back-edge" && step.edge !== undefined) {
-        const edgeKey = `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`;
-        setDfsBackEdges((prev) => new Set(prev).add(edgeKey));
-        setVisitedEdges((prev) => {
-          const n = new Set(prev);
-          n.add(edgeKey);
-          return n;
-        });
-      } else if (step.type === "edge" && step.edge !== undefined) {
-        setVisitedEdges((prev) => {
-          const n = new Set(prev);
-          n.add(
-            `${Math.min(step.edge.sourceId, step.edge.targetId)}-${Math.max(step.edge.sourceId, step.edge.targetId)}`,
-          );
-          return n;
-        });
-        if (selectedAlgo === "PRIM" || selectedAlgo === "KRUSKAL")
-          setMstTotalWeight((prev) => prev + step.edge!.weight);
-      }
-      currentStepRef.current++;
-    }, 700);
+    scheduleNextAnimationStep();
   };
 
   const pauseAnimation = () => {
     if (animationIntervalRef.current)
-      clearInterval(animationIntervalRef.current);
+      clearTimeout(animationIntervalRef.current);
+    animationIntervalRef.current = null;
     setAnimationStatus("paused");
   };
 
