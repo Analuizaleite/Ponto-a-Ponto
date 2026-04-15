@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://analuizaleite.github.io/Ponto-a-Ponto/",
+  "homepage": "https://ponto-a-ponto.tech/",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
