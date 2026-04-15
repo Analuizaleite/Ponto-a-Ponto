@@ -105,6 +105,14 @@ export function generateDFSSteps(
   pushStep({ type: 'mark', nodeId: startNodeId });
   parent[startNodeId] = null;
   dfsRecursive(startNodeId);
+
+  for (let i = 0; i < nodesCount; i++) {
+    if (!visited.has(i)) {
+      pushStep({ type: 'mark', nodeId: i });
+      parent[i] = null;
+      dfsRecursive(i);
+    }
+  }
   
   steps.push({ type: 'done', tdState: { ...td }, ttState: { ...tt }, parentState: { ...parent } });
 

@@ -125,6 +125,58 @@ export function generateBFSSteps(
     }
   }
 
+  for (let i = 0; i < nodesCount; i++) {
+    if (!visited.has(i)) {
+      lCounter++;
+      L[i] = lCounter;
+      nivel[i] = 0;
+      pai[i] = null;
+      queue.push(i);
+      visited.add(i);
+      pushStep({ type: 'queue', nodeId: i });
+
+      while (queue.length > 0) {
+        const currentId = queue.shift()!;
+        pushStep({ type: 'visit', nodeId: currentId });
+
+        for (const edge of adjacency[currentId]) {
+          const neighborId = edge.targetId;
+
+          if (!visited.has(neighborId)) {
+            visited.add(neighborId);
+            lCounter++;
+            L[neighborId] = lCounter;
+            nivel[neighborId] = nivel[currentId] + 1;
+            pai[neighborId] = currentId;
+            pushStep({ type: 'parent-edge', edge });
+            pushStep({ type: 'queue', nodeId: neighborId });
+            queue.push(neighborId);
+          } else if (!isDirected && neighborId === pai[currentId]) {
+            continue;
+          } else if (nivel[neighborId] === nivel[currentId] + 1) {
+            pushStep({ type: 'uncle-edge', edge });
+          } else if (
+            nivel[neighborId] === nivel[currentId] &&
+            pai[currentId] !== null &&
+            pai[neighborId] !== null &&
+            pai[currentId] === pai[neighborId] &&
+            L[neighborId] > L[currentId]
+          ) {
+            pushStep({ type: 'brother-edge', edge });
+          } else if (
+            nivel[neighborId] === nivel[currentId] &&
+            pai[currentId] !== null &&
+            pai[neighborId] !== null &&
+            pai[currentId] !== pai[neighborId] &&
+            L[neighborId] > L[currentId]
+          ) {
+            pushStep({ type: 'cousin-edge', edge });
+          }
+        }
+      }
+    }
+  }
+
   pushStep({ type: 'done' });
   return steps;
 }

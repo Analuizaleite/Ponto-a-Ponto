@@ -789,18 +789,18 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
               <span className="text-xs text-slate-300">Vértice não explorado</span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-2">
-                <span className="w-8 h-0.5 bg-slate-400" />
-              </span>
-              <span className="text-xs text-slate-300">Aresta não explorada</span>
-            </div>
-            <div className="flex items-center gap-3">
               <span className="w-4 h-4 rounded-full bg-emerald-800 border border-slate-700" />
               <span className="text-xs text-slate-300">Vértice marcado</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="w-4 h-4 rounded-full bg-cyan-300 border border-slate-700" />
               <span className="text-xs text-slate-300">Vértice explorado</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-slate-400" />
+              </span>
+              <span className="text-xs text-slate-300">Aresta não explorada</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center gap-2">
@@ -957,7 +957,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                   <th className="p-2">Vértice</th>
                   <th className="p-2 text-[#3aebb9]">TD</th>
                   <th className="p-2 text-purple-400">TT</th>
-                  <th className="p-2 text-yellow-500">pai</th>
+                  <th className="p-2 text-yellow-500">Pai</th>
                 </tr>
               </thead>
               <tbody>
@@ -977,7 +977,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                       {dfsPai[n.id] !== undefined && dfsPai[n.id] !== null
                         ? (nodes.find((node) => node.id === dfsPai[n.id])
                             ?.label ?? dfsPai[n.id])
-                        : "-"}
+                        : "Ø"}
                     </td>
                   </tr>
                 ))}
@@ -1011,9 +1011,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
               <span className="inline-flex items-center gap-2">
                 <span className="w-8 h-0.5 bg-slate-400" />
               </span>
-              <span className="text-xs text-slate-300">
-                Aresta não explorada
-              </span>
+              <span className="text-xs text-slate-300">Aresta não explorada</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center gap-2">

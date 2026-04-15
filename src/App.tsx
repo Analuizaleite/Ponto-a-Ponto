@@ -683,13 +683,17 @@ function App() {
   const onImportDimacsGraph = (dimacsGraph: DimacsGraph) => {
     try {
       const positions = calculateCircleLayout(dimacsGraph.nodeCount);
-      const newNodes: Node[] = dimacsGraph.nodes.map((node) => ({
-        id: node.id,
-        label: node.name,
-        vertexName: node.name,
-        x: positions[node.id].x,
-        y: positions[node.id].y,
-      }));
+      const newNodes: Node[] = [];
+      for (let i = 0; i < dimacsGraph.nodeCount; i++) {
+        const node = dimacsGraph.nodes.find(n => n.id === i);
+        newNodes.push({
+          id: i,
+          label: node ? node.name : i.toString(),
+          vertexName: node ? node.name : i.toString(),
+          x: positions[i].x,
+          y: positions[i].y,
+        });
+      }
 
       const newEdges: Edge[] = dimacsGraph.edges.map((edge) => ({
         sourceId: edge.source,
