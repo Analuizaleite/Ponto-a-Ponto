@@ -7,6 +7,7 @@ import { GraphCanvas } from "./components/GraphCanvas";
 import { SandboxSidebar } from "./components/SandboxSidebar";
 import { GameSidebar } from "./components/GameSidebar";
 import { DimacsImportModal } from "./components/DimacsImportModal";
+import { AlgorithmExplainerModal } from "./components/AlgorithmExplainerModal";
 
 // --- DADOS E ASSETS ---
 import logoImage from "./assets/logo_transparente.png";
@@ -398,6 +399,8 @@ function App() {
   const [ffFlows, setFfFlows] = useState<Record<string, number>>({});
   const [ffMaxFlow, setFfMaxFlow] = useState<number>(0);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showAlgoExplainer, setShowAlgoExplainer] = useState(false);
+  const [seenAlgos, setSeenAlgos] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 3000);
@@ -624,6 +627,24 @@ function App() {
     currentStepRef.current = 0;
     stepsRef.current = [];
     resetVisualState();
+  };
+
+  const handlePlayWithExplainer = () => {
+    if (appMode !== "sandbox") {
+      playAnimation();
+      return;
+    }
+    if (!seenAlgos.has(selectedAlgo)) {
+      setShowAlgoExplainer(true);
+    } else {
+      playAnimation();
+    }
+  };
+
+  const confirmAndPlay = () => {
+    setSeenAlgos((prev) => new Set(prev).add(selectedAlgo));
+    setShowAlgoExplainer(false);
+    playAnimation();
   };
 
   const playAnimation = () => {
@@ -1153,7 +1174,7 @@ function App() {
                   flowSinkId={flowSinkId}
                   setFlowSinkId={setFlowSinkId}
                   animationStatus={animationStatus}
-                  onPlay={playAnimation}
+                  onPlay={handlePlayWithExplainer}
                   onPause={pauseAnimation}
                   onStop={stopAnimation}
                   mstTotalWeight={mstTotalWeight}
@@ -1225,7 +1246,7 @@ function App() {
                   flowSinkId={flowSinkId}
                   setFlowSinkId={setFlowSinkId}
                   animationStatus={animationStatus}
-                  onPlay={playAnimation}
+                  onPlay={handlePlayWithExplainer}
                   onPause={pauseAnimation}
                   onStop={stopAnimation}
                   mstTotalWeight={mstTotalWeight}
@@ -1284,8 +1305,13 @@ function App() {
         onClose={() => setShowImportModal(false)}
         onImport={onImportDimacsGraph}
       />
-
-
+      {showAlgoExplainer && (
+        <AlgorithmExplainerModal
+          algo={selectedAlgo}
+          onClose={() => setShowAlgoExplainer(false)}
+          onConfirm={confirmAndPlay}
+        />
+      )}
     </div>
   );
 }

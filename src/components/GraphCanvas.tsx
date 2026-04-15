@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import type { Node, Edge, AppMode, ActiveTool } from "../types";
+import { InstructionsModal } from "./InstructionsModal";
 
 interface GraphCanvasProps {
   appMode: AppMode;
@@ -78,6 +79,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   onNodeClick,
   onEdgeClick,
 }) => {
+  const [showInstructions, setShowInstructions] = useState(false);
+
   const getLudicNodeVisuals = (nodeId: number) => {
     if (appMode !== "game" || !themeId) {
       return {
@@ -389,7 +392,17 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         >
           ⟲
         </button>
+        {appMode === "sandbox" && (
+          <button
+            onClick={() => setShowInstructions(true)}
+            className="p-3 bg-ponto-accent rounded-full shadow-lg text-ponto-darker hover:bg-ponto-accent/80 transition-colors"
+            title="Instruções"
+          >
+            💡
+          </button>
+        )}
       </div>
+      <InstructionsModal isOpen={showInstructions} onClose={() => setShowInstructions(false)} />
     </div>
   );
 };
