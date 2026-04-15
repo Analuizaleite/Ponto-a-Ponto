@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 
 // --- IMPORTAÇÃO DE TIPOS E COMPONENTES ---
-import type { Node, Edge, AppMode, ActiveTool } from "./types";
+import type { Node, Edge, AppMode, ActiveTool, DimacsGraph } from "./types";
 import { Header } from "./components/Header";
 import { GraphCanvas } from "./components/GraphCanvas";
 import { SandboxSidebar } from "./components/SandboxSidebar";
 import { GameSidebar } from "./components/GameSidebar";
+import { DimacsImportModal } from "./components/DimacsImportModal";
 
 // --- DADOS E ASSETS ---
 import logoImage from "./assets/logo_transparente.png";
@@ -129,6 +130,23 @@ const generateRandomGraph = (
   }
   if (algo === "DIJKSTRA") addEdge(0, numNodes - 1, 15, 25);
   return { nodes, edges };
+};
+
+const calculateCircleLayout = (nodeCount: number, canvasWidth = 700, canvasHeight = 500): { x: number; y: number }[] => {
+  const centerX = canvasWidth / 2;
+  const centerY = canvasHeight / 2;
+  const radiusX = Math.min(canvasWidth, canvasHeight) * 0.35;
+  const radiusY = Math.min(canvasWidth, canvasHeight) * 0.35;
+
+  const positions: { x: number; y: number }[] = [];
+  for (let i = 0; i < nodeCount; i++) {
+    const angle = (i / nodeCount) * 2 * Math.PI - Math.PI / 2;
+    positions.push({
+      x: centerX + radiusX * Math.cos(angle) + (Math.random() - 0.5) * 20,
+      y: centerY + radiusY * Math.sin(angle) + (Math.random() - 0.5) * 20,
+    });
+  }
+  return positions;
 };
 
 const generateDynamicLevel = (algo: string) => {
@@ -378,9 +396,7 @@ function App() {
   const [fwJ, setFwJ] = useState<number | null>(null);
   const [ffFlows, setFfFlows] = useState<Record<string, number>>({});
   const [ffMaxFlow, setFfMaxFlow] = useState<number>(0);
-  /*const [setFfAugmentingEdges] = useState<Set<string>>(
-    new Set(),
-  );*/
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 3000);
@@ -662,6 +678,34 @@ function App() {
     if (animationIntervalRef.current)
       clearInterval(animationIntervalRef.current);
     setAnimationStatus("paused");
+  };
+
+  const onImportDimacsGraph = (dimacsGraph: DimacsGraph) => {
+    try {
+      const positions = calculateCircleLayout(dimacsGraph.nodeCount);
+      const newNodes: Node[] = dimacsGraph.nodes.map((node) => ({
+        id: node.id,
+        label: node.name,
+        vertexName: node.name,
+        x: positions[node.id].x,
+        y: positions[node.id].y,
+      }));
+
+      const newEdges: Edge[] = dimacsGraph.edges.map((edge) => ({
+        sourceId: edge.source,
+        targetId: edge.target,
+        weight: edge.weight,
+      }));
+
+      setNodes(newNodes);
+      setEdges(newEdges);
+      setIsDirected(true);
+      setShowImportModal(false);
+      resetVisualState();
+      stopAnimation();
+    } catch (error) {
+      alert(`Erro ao processar grafo: ${error instanceof Error ? error.message : String(error)}`);
+    }
   };
 
   const clearAll = () => {
@@ -967,6 +1011,7 @@ function App() {
         clearAll={clearAll}
         loadLevel={() => {}}
         setEdges={setEdges}
+        onImportGraph={() => setShowImportModal(true)}
       />
 
       <div className="flex flex-1 flex-col md:flex-row overflow-hidden relative">
@@ -1204,6 +1249,13 @@ function App() {
           </div>
         )}
       </div>
+      <DimacsImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={onImportDimacsGraph}
+      />
+
+
     </div>
   );
 }

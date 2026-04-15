@@ -9,6 +9,7 @@ import {
   Gamepad2,
   Wrench,
   Trash2,
+  FileText,
 } from "lucide-react";
 import type { AppMode, ActiveTool } from "../types";
 import logoImage from "../assets/logo_transparente.png";
@@ -23,6 +24,7 @@ interface HeaderProps {
   clearAll: () => void;
   loadLevel: (index: number) => void;
   setEdges: (edges: any[]) => void;
+  onImportGraph: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -35,6 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
   clearAll,
   loadLevel,
   setEdges,
+  onImportGraph,
 }) => {
   return (
     <header className="flex flex-col border-b border-ponto-muted bg-ponto-darker shadow-md z-10">
@@ -117,6 +120,15 @@ export const Header: React.FC<HeaderProps> = ({
               )}
               {isDirected ? "Direcionado" : "Não Direcionado"}
             </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onImportGraph}
+                className="flex items-center gap-2 text-slate-300 hover:bg-ponto-dark px-3 py-1.5 rounded text-sm font-medium transition-colors"
+                title="Importar grafo em formato DIMACS"
+              >
+                <FileText size={16} /> Importar DIMACS
+              </button>
+            </div>
             <button
               onClick={clearAll}
               className="flex items-center gap-2 text-red-400 hover:bg-red-500/20 px-3 py-1.5 rounded text-sm font-medium transition-colors ml-auto"
@@ -172,6 +184,13 @@ export const Header: React.FC<HeaderProps> = ({
               <ArrowRightLeft size={14} className="text-slate-400" />
             )}
             {isDirected ? "Dir." : "N. Dir."}
+          </button>
+          <button
+            onClick={onImportGraph}
+            className="flex items-center gap-1.5 text-slate-300 hover:bg-ponto-dark px-2 py-1.5 rounded text-xs font-medium transition-colors"
+            title="Importar grafo em formato DIMACS"
+          >
+            <FileText size={14} /> Importar
           </button>
           <button
             onClick={clearAll}

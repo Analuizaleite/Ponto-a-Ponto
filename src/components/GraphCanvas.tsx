@@ -343,7 +343,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                           textAnchor="middle"
                           className="fill-emerald-400 font-mono text-[11px] font-bold"
                         >
-                          {node.label}g
+                          {node.vertexName || node.label}
                         </text>
                       </g>
                     ) : (
@@ -354,7 +354,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                         textAnchor="middle"
                         className={`font-bold text-sm pointer-events-none select-none ${ludic.icon ? "hidden" : isVisited ? "fill-ponto-darker" : "fill-white"}`}
                       >
-                        {node.label}
+                        {node.vertexName || node.label}
                       </text>
                     )}
                   </g>
