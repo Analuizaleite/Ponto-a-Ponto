@@ -115,7 +115,8 @@ const ALGO_INFO: Record<string, AlgoInfo> = {
       "Defina distância 0 para o nó inicial e ∞ para os demais.",
       "Repita N-1 vezes: percorre TODAS as arestas e relaxa as que puder.",
       "'Relaxar' = se passar por essa aresta for mais barato, atualize.",
-      "Passagem extra: se ainda relaxar, existe um ciclo negativo.",
+      "Se uma fase inteira terminar sem nenhuma relaxação, o algoritmo já estabilizou e pode parar antes.",
+      "Depois disso, faz uma passagem extra: se ainda conseguir relaxar alguma aresta, existe ciclo negativo.",
     ],
     complexity: {
       time: "O(V · E)",
@@ -125,10 +126,11 @@ const ALGO_INFO: Record<string, AlgoInfo> = {
     },
     whatToWatch: [
       { color: "bg-amber-400", label: "Aresta sendo testada" },
-      { color: "bg-[#3aebb9]", label: "Aresta relaxada (distância melhorou)" },
+      { color: "bg-pink-500", label: "Aresta validada na checagem de ciclo negativo" },
+      { color: "bg-[#3aebb9]", label: "Aresta relaxada" },
       { color: "bg-red-500", label: "Ciclo negativo detectado!" },
     ],
-    tip: "Se aparecer 'Estabilizado' na sidebar, o algoritmo convergiu antes das N-1 iterações — uma otimização automática.",
+    tip: "Se a sidebar mostrar 'Estabilizado (Paragem Antecipada)', significa que uma fase completa terminou sem melhorar nenhuma distância. Nesse ponto, os menores caminhos já convergiram; o algoritmo encerra as fases principais e segue só para a verificação de ciclo negativo. Nessa checagem final, a aresta em validação aparece com destaque rosa.",
   },
   FLOYD_WARSHALL: {
     name: "Floyd-Warshall",

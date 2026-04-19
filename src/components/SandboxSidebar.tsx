@@ -806,12 +806,6 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
               </span>
               <span className="text-xs text-slate-300">Aresta inserida na AGM</span>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-2">
-                <span className="w-8 h-0.5 bg-[#2c6455]" />
-              </span>
-              <span className="text-xs text-slate-300">Aresta não explorada</span>
-            </div>
           </div>
         </div>
       )}
@@ -843,12 +837,6 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                 <span className="w-8 h-0.5 bg-red-500" />
               </span>
               <span className="text-xs text-slate-300">Aresta que forma ciclo</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-2">
-                <span className="w-8 h-0.5 bg-[#2c6455]" />
-              </span>
-              <span className="text-xs text-slate-300">Aresta não explorada</span>
             </div>
           </div>
         </div>
@@ -934,6 +922,40 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
           </div>
         )}
 
+      {selectedAlgo === "BELLMAN_FORD" && (
+        <div className="border-t border-ponto-muted/30 pt-4">
+          <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
+            Legenda Bellman-Ford
+          </h2>
+          <div className="bg-ponto-darker rounded-lg border border-ponto-muted/40 p-4 shadow-inner space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-amber-400" />
+              </span>
+              <span className="text-xs text-slate-300">Aresta sendo testada</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-pink-500" />
+              </span>
+              <span className="text-xs text-slate-300">Aresta sendo validada na fase de ciclo negativo</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-[#3aebb9]" />
+              </span>
+              <span className="text-xs text-slate-300">Aresta relaxada</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-red-500" />
+              </span>
+              <span className="text-xs text-slate-300">Ciclo negativo detectado</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedAlgo === "BFS" && (
         <div className="border-t border-ponto-muted/30 pt-4">
           <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
@@ -951,12 +973,6 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
             <div className="flex items-center gap-3">
               <span className="w-4 h-4 rounded-full bg-cyan-300 border border-slate-700" />
               <span className="text-xs text-slate-300">Vértice explorado</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-2">
-                <span className="w-8 h-0.5 bg-slate-400" />
-              </span>
-              <span className="text-xs text-slate-300">Aresta não explorada</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center gap-2">
@@ -1162,12 +1178,6 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
             <div className="flex items-center gap-3">
               <span className="w-4 h-4 rounded-full bg-cyan-300 border border-slate-700" />
               <span className="text-xs text-slate-300">Vértice explorado</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-2">
-                <span className="w-8 h-0.5 bg-slate-400" />
-              </span>
-              <span className="text-xs text-slate-300">Aresta não explorada</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center gap-2">

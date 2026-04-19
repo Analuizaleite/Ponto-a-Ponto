@@ -17,6 +17,7 @@ interface GraphCanvasProps {
   themeId?: string | null;
   ffFlows?: Record<string, number>;
   bfNegativeCycleEdges?: Edge[];
+  bfCycleCheckEdge?: Edge | null;
   selectedAlgo?: string;
   currentAugmentingPath?: Edge[];
   dfsTreeEdges?: Set<string>;
@@ -60,6 +61,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   themeId,
   ffFlows,
   bfNegativeCycleEdges,
+  bfCycleCheckEdge = null,
   selectedAlgo,
   currentAugmentingPath = [],
   dfsTreeEdges = new Set(),
@@ -257,6 +259,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                     ce.sourceId === edge.targetId &&
                     ce.targetId === edge.sourceId),
               );
+              const isBellmanCycleCheckEdge =
+                selectedAlgo === "BELLMAN_FORD" && matchesEdge(edge, bfCycleCheckEdge);
 
               let edgeText = edge.weight.toString();
               if (selectedAlgo === "FORD_FULKERSON" && ffFlows) {
@@ -270,6 +274,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 ? "#ef4444"
                 : isKruskalCycleEdge
                   ? "#ef4444"
+                : isBellmanCycleCheckEdge
+                  ? "#ec4899"
                 : isDijkstraPathEdge
                   ? "#3aebb9"
                 : isDijkstraSelectedEdge
@@ -296,7 +302,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                                   ? "#3aebb9"
                                   : baseStyle.color;
 
-              const lineWidth = isDijkstraSelectedEdge || isDijkstraPathEdge || isAugmenting ? "4" : baseStyle.width;
+              const lineWidth = isBellmanCycleCheckEdge || isDijkstraSelectedEdge || isDijkstraPathEdge || isAugmenting ? "4" : baseStyle.width;
               const lineDash = isBackEdge ? "8 4" : undefined;
               const markerEnd =
                 !isDirected

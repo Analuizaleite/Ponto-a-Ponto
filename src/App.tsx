@@ -390,6 +390,7 @@ function App() {
   const [bfIteration, setBfIteration] = useState<number | string>(0);
   const [bfHasNegativeCycle, setBfHasNegativeCycle] = useState<boolean>(false);
   const [bfNegativeCycleEdges, setBfNegativeCycleEdges] = useState<Edge[]>([]);
+  const [bfCycleCheckEdge, setBfCycleCheckEdge] = useState<Edge | null>(null);
   const [dfsTD, setDfsTD] = useState<Record<number, number>>({});
   const [dfsTT, setDfsTT] = useState<Record<number, number>>({});
   const [dfsPai, setDfsPai] = useState<Record<number, number | null>>({});
@@ -453,6 +454,7 @@ function App() {
     setBfIteration(0);
     setBfHasNegativeCycle(false);
     setBfNegativeCycleEdges([]);
+    setBfCycleCheckEdge(null);
     setFwDistances({});
     setFwPrevious({});
     setFwK(null);
@@ -549,6 +551,18 @@ function App() {
     if (step.previousState && selectedAlgo === "BELLMAN_FORD")
       setBfPrevious(step.previousState);
     if (step.iteration !== undefined) setBfIteration(step.iteration);
+    if (
+      selectedAlgo === "BELLMAN_FORD" &&
+      step.type === "test-edge" &&
+      step.iteration === "Verificando Ciclos..."
+    ) {
+      setBfCycleCheckEdge(step.edge ?? null);
+    } else if (
+      selectedAlgo === "BELLMAN_FORD" &&
+      (step.type === "relax" || step.type === "done" || step.type === "iteration")
+    ) {
+      setBfCycleCheckEdge(null);
+    }
     if (step.hasNegativeCycle !== undefined)
       setBfHasNegativeCycle(step.hasNegativeCycle);
     if (step.negativeCycleEdges !== undefined)
@@ -1197,6 +1211,7 @@ function App() {
               evaluatingEdge={evaluatingEdge}
               ffFlows={ffFlows}
               bfNegativeCycleEdges={bfNegativeCycleEdges}
+              bfCycleCheckEdge={bfCycleCheckEdge}
               currentAugmentingPath={currentAugmentingPath}
               dfsTreeEdges={dfsTreeEdges}
               dfsBackEdges={dfsBackEdges}
