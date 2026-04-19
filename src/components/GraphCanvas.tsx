@@ -26,6 +26,9 @@ interface GraphCanvasProps {
   bfsUncleEdges?: Set<string>;
   bfsBrotherEdges?: Set<string>;
   bfsCousinEdges?: Set<string>;
+  dijkstraCutEdges?: Set<string>;
+  dijkstraPathEdges?: Set<string>;
+  dijkstraSelectedEdge?: Edge | null;
 
   transform: { x: number; y: number; k: number };
   onCanvasMouseDown: (e: React.MouseEvent | React.TouchEvent) => void;
@@ -66,6 +69,9 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   bfsUncleEdges = new Set(),
   bfsBrotherEdges = new Set(),
   bfsCousinEdges = new Set(),
+  dijkstraCutEdges = new Set(),
+  dijkstraPathEdges = new Set(),
+  dijkstraSelectedEdge = null,
   transform,
   onCanvasMouseDown,
   onCanvasMouseMove,
@@ -80,6 +86,23 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   onEdgeClick,
 }) => {
   const [showInstructions, setShowInstructions] = useState(false);
+
+  const getDirectedAwareEdgeKey = (edge: Edge) =>
+    isDirected
+      ? `${edge.sourceId}->${edge.targetId}`
+      : `${Math.min(edge.sourceId, edge.targetId)}-${Math.max(edge.sourceId, edge.targetId)}`;
+
+  const matchesEdge = (first: Edge, second: Edge | null) => {
+    if (!second) return false;
+    if (isDirected) {
+      return first.sourceId === second.sourceId && first.targetId === second.targetId;
+    }
+
+    return (
+      (first.sourceId === second.sourceId && first.targetId === second.targetId) ||
+      (first.sourceId === second.targetId && first.targetId === second.sourceId)
+    );
+  };
 
   const getLudicNodeVisuals = (nodeId: number) => {
     if (appMode !== "game" || !themeId) {
@@ -173,6 +196,16 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           <marker id="arrowhead-small">
             markerEnd={isDirected ? (themeId === "crises" ? "url(#arrowhead-small)" : "url(#arrowhead)") : undefined}
           </marker>
+          <marker
+            id="arrowhead-cut"
+            markerWidth="8"
+            markerHeight="5"
+            refX="25"
+            refY="2.5"
+            orient="auto"
+          >
+            <polygon points="0 0, 8 2.5, 0 5" fill="#3B82F6" opacity="0.9" />
+          </marker>
         </defs>
 
         <g
@@ -193,6 +226,14 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               const isBfsUncleEdge = selectedAlgo === "BFS" && bfsUncleEdges.has(edgeKey);
               const isBfsBrotherEdge = selectedAlgo === "BFS" && bfsBrotherEdges.has(edgeKey);
               const isBfsCousinEdge = selectedAlgo === "BFS" && bfsCousinEdges.has(edgeKey);
+              const isDijkstraCutEdge =
+                selectedAlgo === "DIJKSTRA" &&
+                dijkstraCutEdges.has(getDirectedAwareEdgeKey(edge));
+              const isDijkstraPathEdge =
+                selectedAlgo === "DIJKSTRA" &&
+                dijkstraPathEdges.has(getDirectedAwareEdgeKey(edge));
+              const isDijkstraSelectedEdge =
+                selectedAlgo === "DIJKSTRA" && matchesEdge(edge, dijkstraSelectedEdge);
 
               const isAugmenting = currentAugmentingPath.some(
                 (ae) =>
@@ -229,6 +270,12 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 ? "#ef4444"
                 : isKruskalCycleEdge
                   ? "#ef4444"
+                : isDijkstraPathEdge
+                  ? "#3aebb9"
+                : isDijkstraSelectedEdge
+                  ? "#f59e0b"
+                : isDijkstraCutEdge
+                  ? "#3B82F6"
                 : isTreeEdge
                   ? "#3aebb9"
                   : isBfsParentEdge
@@ -249,8 +296,16 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                                   ? "#3aebb9"
                                   : baseStyle.color;
 
-              const lineWidth = isAugmenting ? "4" : baseStyle.width;
+              const lineWidth = isDijkstraSelectedEdge || isDijkstraPathEdge || isAugmenting ? "4" : baseStyle.width;
               const lineDash = isBackEdge ? "8 4" : undefined;
+              const markerEnd =
+                !isDirected
+                  ? undefined
+                  : isDijkstraSelectedEdge
+                    ? "url(#arrowhead-highlight)"
+                    : isDijkstraCutEdge
+                      ? "url(#arrowhead-cut)"
+                      : "url(#arrowhead)";
               const midX = (s.x + t.x) / 2;
               const midY = (s.y + t.y) / 2;
 
@@ -267,7 +322,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                     stroke={lineColor}
                     strokeWidth={lineWidth}
                     strokeDasharray={lineDash}
-                    markerEnd={isDirected ? "url(#arrowhead)" : undefined}
+                    markerEnd={markerEnd}
                     className={`transition-all duration-300`}
                   />
                   {themeId !== "arvores" && (
@@ -307,6 +362,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 fillColor = "fill-slate-700";
                 if (isVisited) fillColor = "fill-cyan-300";
                 else if (isQueue) fillColor = "fill-emerald-800";
+              } else if (selectedAlgo === "DIJKSTRA" && appMode !== "game") {
+                fillColor = isVisited ? "fill-ponto-accent" : "fill-slate-700";
               } else if (isVisited) fillColor = "fill-ponto-accent";
               else if (isQueue) fillColor = "fill-ponto-muted";
 

@@ -73,6 +73,11 @@ const buildAdjacencyList = (edges: Edge[], isDirected: boolean): Record<string, 
   return adjacency;
 };
 
+const getDirectedAwareEdgeKey = (edge: Edge, isDirected: boolean) =>
+  isDirected
+    ? `${edge.sourceId}->${edge.targetId}`
+    : `${Math.min(edge.sourceId, edge.targetId)}-${Math.max(edge.sourceId, edge.targetId)}`;
+
 // --- MOTOR DE GERAÇÃO DINÂMICA ---
 const generateRandomGraph = (
   numNodes: number,
@@ -176,7 +181,7 @@ const generateDynamicLevel = (algo: string) => {
       ),
     );
   } else if (algo === "DIJKSTRA") {
-    const steps = generateDijkstraSteps(startNodeId, numNodes, edges);
+    const steps = generateDijkstraSteps(startNodeId, numNodes, edges, isDirected, targetNodeId);
     const lastStep = steps[steps.length - 1];
     if (lastStep && lastStep.previous)
       expectedVisits = getShortestPath(
@@ -336,6 +341,7 @@ function App() {
   const [selectedAlgo, setSelectedAlgo] = useState<string>("BFS");
   const [startNodeId, setStartNodeId] = useState<string>("");
   const [targetNodeId, setTargetNodeId] = useState<string>("");
+  const [dijkstraUseTarget, setDijkstraUseTarget] = useState<boolean>(true);
   const [flowSourceId, setFlowSourceId] = useState<string>("");
   const [flowSinkId, setFlowSinkId] = useState<string>("");
   const [dfsSortStrategy, setDfsSortStrategy] = useState<'ascending' | 'custom'>('ascending');
@@ -374,6 +380,9 @@ function App() {
   const [dijkstraPrevious, setDijkstraPrevious] = useState<
     Record<number, number | null>
   >({});
+  const [dijkstraCutEdges, setDijkstraCutEdges] = useState<Set<string>>(new Set());
+  const [dijkstraPathEdges, setDijkstraPathEdges] = useState<Set<string>>(new Set());
+  const [dijkstraSelectedEdge, setDijkstraSelectedEdge] = useState<Edge | null>(null);
   const [bfDistances, setBfDistances] = useState<Record<number, number>>({});
   const [bfPrevious, setBfPrevious] = useState<Record<number, number | null>>(
     {},
@@ -431,6 +440,9 @@ function App() {
     setMstTotalWeight(0);
     setDijkstraDistances({});
     setDijkstraPrevious({});
+    setDijkstraCutEdges(new Set());
+    setDijkstraPathEdges(new Set());
+    setDijkstraSelectedEdge(null);
     setDfsTD({});
     setDfsTT({});
     setBfsL({});
@@ -465,6 +477,34 @@ function App() {
       setDijkstraDistances(step.distancesState);
     if (step.previousState && selectedAlgo === "DIJKSTRA")
       setDijkstraPrevious(step.previousState);
+    if (selectedAlgo === "DIJKSTRA" && step.cutEdges) {
+      setDijkstraCutEdges(
+        new Set(
+          step.cutEdges.map((edge: Edge) => getDirectedAwareEdgeKey(edge, isDirected)),
+        ),
+      );
+    }
+    if (selectedAlgo === "DIJKSTRA" && step.type === "select-edge") {
+      setDijkstraSelectedEdge(step.edge ?? null);
+    }
+    if (selectedAlgo === "DIJKSTRA" && step.type === "visit" && step.edge) {
+      setDijkstraPathEdges((prev) => {
+        const next = new Set(prev);
+        next.add(getDirectedAwareEdgeKey(step.edge, isDirected));
+        return next;
+      });
+    }
+    if (selectedAlgo === "DIJKSTRA" && step.type === "done") {
+      setDijkstraSelectedEdge(null);
+      setDijkstraCutEdges(new Set());
+      setDijkstraPathEdges(
+        new Set(
+          (step.pathEdges ?? []).map((edge: Edge) =>
+            getDirectedAwareEdgeKey(edge, isDirected),
+          ),
+        ),
+      );
+    }
     if (step.tdState) setDfsTD(step.tdState);
     if (step.ttState) setDfsTT(step.ttState);
     if (step.parentState) setDfsPai(step.parentState);
@@ -655,6 +695,9 @@ function App() {
         selectedAlgo !== "KRUSKAL" &&
         selectedAlgo !== "FLOYD_WARSHALL"
       ) {
+        const requiresTarget =
+          selectedAlgo === "FORD_FULKERSON" ||
+          (selectedAlgo === "DIJKSTRA" && dijkstraUseTarget);
         const isFF = selectedAlgo === "FORD_FULKERSON";
         const searchStart = startNodeId.trim();
         startNode = nodes.find(
@@ -663,14 +706,18 @@ function App() {
         if (!startNode)
           return alert(`Nó inicial ${isFF ? "(Fonte)" : ""} não encontrado.`);
 
-        if (isFF) {
+        if (requiresTarget) {
           const searchTarget = targetNodeId.trim();
           targetNode = nodes.find(
             (n) => n.label === searchTarget || n.id.toString() === searchTarget,
           );
           if (!targetNode)
-            return alert(`Nó sumidouro (destino) não encontrado.`);
-          if (startNode.id === targetNode.id)
+            return alert(
+              isFF
+                ? "Nó sumidouro (destino) não encontrado."
+                : "Nó final (destino) não encontrado.",
+            );
+          if (isFF && startNode.id === targetNode.id)
             return alert("A Fonte e o Sumidouro não podem ser o mesmo nó!");
         }
       }
@@ -686,7 +733,13 @@ function App() {
       else if (selectedAlgo === "DFS")
         steps = generateDFSSteps(startId, nodesCount, edges, isDirected, dfsSortStrategy, customAdjacencyOrder);
       else if (selectedAlgo === "DIJKSTRA")
-        steps = generateDijkstraSteps(startId, nodesCount, edges);
+        steps = generateDijkstraSteps(
+          startId,
+          nodesCount,
+          edges,
+          isDirected,
+          dijkstraUseTarget ? targetNode?.id : undefined,
+        );
       else if (selectedAlgo === "PRIM")
         steps = generatePrimSteps(startId, nodesCount, edges);
       else if (selectedAlgo === "KRUSKAL")
@@ -1152,6 +1205,9 @@ function App() {
               bfsUncleEdges={bfsUncleEdges}
               bfsBrotherEdges={bfsBrotherEdges}
               bfsCousinEdges={bfsCousinEdges}
+              dijkstraCutEdges={dijkstraCutEdges}
+              dijkstraPathEdges={dijkstraPathEdges}
+              dijkstraSelectedEdge={dijkstraSelectedEdge}
             />
 
             <aside className="hidden md:flex flex-col w-80 h-full absolute right-0 top-0 bg-ponto-dark border-l border-ponto-muted/50 p-6 shadow-xl z-10 gap-6 overflow-y-auto">
@@ -1169,6 +1225,8 @@ function App() {
                   setStartNodeId={setStartNodeId}
                   targetNodeId={targetNodeId}
                   setTargetNodeId={setTargetNodeId}
+                  dijkstraUseTarget={dijkstraUseTarget}
+                  setDijkstraUseTarget={setDijkstraUseTarget}
                   flowSourceId={flowSourceId}
                   setFlowSourceId={setFlowSourceId}
                   flowSinkId={flowSinkId}
@@ -1241,6 +1299,8 @@ function App() {
                   setStartNodeId={setStartNodeId}
                   targetNodeId={targetNodeId}
                   setTargetNodeId={setTargetNodeId}
+                  dijkstraUseTarget={dijkstraUseTarget}
+                  setDijkstraUseTarget={setDijkstraUseTarget}
                   flowSourceId={flowSourceId}
                   setFlowSourceId={setFlowSourceId}
                   flowSinkId={flowSinkId}

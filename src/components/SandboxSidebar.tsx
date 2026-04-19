@@ -47,6 +47,8 @@ export interface SandboxSidebarProps {
   setStartNodeId: (id: string) => void;
   targetNodeId: string;
   setTargetNodeId: (id: string) => void;
+  dijkstraUseTarget: boolean;
+  setDijkstraUseTarget: (useTarget: boolean) => void;
   flowSourceId: string;
   setFlowSourceId: (id: string) => void;
   flowSinkId: string;
@@ -97,6 +99,8 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   setStartNodeId,
   targetNodeId,
   setTargetNodeId,
+  dijkstraUseTarget,
+  setDijkstraUseTarget,
   animationStatus,
   onPlay,
   onPause,
@@ -132,6 +136,13 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   const isRunning = animationStatus === "playing";
   const isPaused = animationStatus === "paused";
   const isIdle = animationStatus === "idle";
+
+  const getSelectableOptionClass = (selected: boolean, disabled: boolean) =>
+    `flex items-center gap-2 rounded-md border px-3 py-2 text-xs cursor-pointer transition-colors ${
+      selected
+        ? "border-ponto-accent bg-ponto-accent/15 text-ponto-accent"
+        : "border-ponto-muted/40 text-slate-300 hover:border-ponto-accent/60 hover:text-ponto-accent"
+    } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`;
 
   const handleModuleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newModule = e.target.value;
@@ -243,7 +254,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                 Estratégia de Ordenação:
               </label>
               <div className="flex flex-col gap-2">
-                <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-ponto-accent transition-colors">
+                <label className={getSelectableOptionClass(dfsSortStrategy === "ascending", !isIdle)}>
                   <input
                     type="radio"
                     name="dfsSortStrategy"
@@ -253,13 +264,13 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                       setDfsSortStrategy(e.target.value as "ascending")
                     }
                     disabled={!isIdle}
-                    className="cursor-pointer"
+                    className="cursor-pointer accent-[#3aebb9]"
                   />
                   <span>
                     Ordem Alfabética/Crescente da lista de adjacência (padrão)
                   </span>
                 </label>
-                <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-ponto-accent transition-colors">
+                <label className={getSelectableOptionClass(dfsSortStrategy === "custom", !isIdle)}>
                   <input
                     type="radio"
                     name="dfsSortStrategy"
@@ -269,7 +280,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                       setDfsSortStrategy(e.target.value as "custom")
                     }
                     disabled={!isIdle}
-                    className="cursor-pointer"
+                    className="cursor-pointer accent-[#3aebb9]"
                   />
                   <span>Personalizado (você configura)</span>
                 </label>
@@ -430,7 +441,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                 Estratégia de Ordenação:
               </label>
               <div className="flex flex-col gap-2">
-                <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-ponto-accent transition-colors">
+                <label className={getSelectableOptionClass(bfsSortStrategy === "ascending", !isIdle)}>
                   <input
                     type="radio"
                     name="bfsSortStrategy"
@@ -440,13 +451,13 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                       setBfsSortStrategy(e.target.value as "ascending")
                     }
                     disabled={!isIdle}
-                    className="cursor-pointer"
+                    className="cursor-pointer accent-[#3aebb9]"
                   />
                   <span>
                     Ordem Alfabética/Crescente da lista de adjacência (padrão)
                   </span>
                 </label>
-                <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-ponto-accent transition-colors">
+                <label className={getSelectableOptionClass(bfsSortStrategy === "custom", !isIdle)}>
                   <input
                     type="radio"
                     name="bfsSortStrategy"
@@ -456,7 +467,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                       setBfsSortStrategy(e.target.value as "custom")
                     }
                     disabled={!isIdle}
-                    className="cursor-pointer"
+                    className="cursor-pointer accent-[#3aebb9]"
                   />
                   <span>Personalizado (você configura)</span>
                 </label>
@@ -629,10 +640,45 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                 />
               </div>
 
-              {selectedAlgo === "FORD_FULKERSON" && (
+              {selectedAlgo === "DIJKSTRA" && (
+                <div className="flex flex-col gap-3 bg-ponto-muted/20 p-3 rounded-md border border-ponto-muted/40">
+                  <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                    Objetivo do Cálculo:
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    <label className={getSelectableOptionClass(dijkstraUseTarget, !isIdle)}>
+                      <input
+                        type="radio"
+                        name="dijkstraTargetMode"
+                        checked={dijkstraUseTarget}
+                        onChange={() => setDijkstraUseTarget(true)}
+                        disabled={!isIdle}
+                        className="cursor-pointer accent-[#3aebb9]"
+                      />
+                      <span>Calcular menor caminho entre origem e destino</span>
+                    </label>
+                    <label className={getSelectableOptionClass(!dijkstraUseTarget, !isIdle)}>
+                      <input
+                        type="radio"
+                        name="dijkstraTargetMode"
+                        checked={!dijkstraUseTarget}
+                        onChange={() => setDijkstraUseTarget(false)}
+                        disabled={!isIdle}
+                        className="cursor-pointer accent-[#3aebb9]"
+                      />
+                      <span>Calcular menor caminho da origem para todos os vértices</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {(selectedAlgo === "FORD_FULKERSON" ||
+                (selectedAlgo === "DIJKSTRA" && dijkstraUseTarget)) && (
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-slate-400">
-                    Nó Sumidouro (Destino):
+                    {selectedAlgo === "FORD_FULKERSON"
+                      ? "Nó Sumidouro (Destino):"
+                      : "Nó Final (Destino):"}
                   </label>
                   <input
                     type="text"
@@ -803,6 +849,42 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                 <span className="w-8 h-0.5 bg-[#2c6455]" />
               </span>
               <span className="text-xs text-slate-300">Aresta não explorada</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedAlgo === "DIJKSTRA" && (
+        <div className="border-t border-ponto-muted/30 pt-4">
+          <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
+            Legenda Dijkstra
+          </h2>
+          <div className="bg-ponto-darker rounded-lg border border-ponto-muted/40 p-4 shadow-inner space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="w-4 h-4 rounded-full bg-slate-700 border border-ponto-accent" />
+              <span className="text-xs text-slate-300">Vértice não explorado</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="w-4 h-4 rounded-full bg-[#3aebb9] border border-[#3aebb9]" />
+              <span className="text-xs text-slate-300">Vértice explorado</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-blue-500" />
+              </span>
+              <span className="text-xs text-slate-300">Aresta do corte</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-amber-400" />
+              </span>
+              <span className="text-xs text-slate-300">Aresta selecionada</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-8 h-0.5 bg-[#3aebb9]" />
+              </span>
+              <span className="text-xs text-slate-300">Aresta do caminho</span>
             </div>
           </div>
         </div>

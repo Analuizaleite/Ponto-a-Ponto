@@ -5,104 +5,173 @@ export interface Edge {
 }
 
 export interface DijkstraStep {
-  type: 'visit' | 'queue' | 'edge' | 'done';
+  type: 'visit' | 'cut' | 'select-edge' | 'done';
   nodeId?: number;
   edge?: Edge;
+  cutEdges?: Edge[];
+  pathEdges?: Edge[];
   previous?: Record<number, number | null>;
   distancesState?: Record<number, number>;
   previousState?: Record<number, number | null>;
 }
 
+const edgeMatches = (edge: Edge, sourceId: number, targetId: number, isDirected: boolean) =>
+  isDirected
+    ? edge.sourceId === sourceId && edge.targetId === targetId
+    : (edge.sourceId === sourceId && edge.targetId === targetId) ||
+      (edge.sourceId === targetId && edge.targetId === sourceId);
+
+export function getShortestPath(
+  startId: number,
+  targetId: number,
+  previous: Record<number, number | null>
+): number[] {
+  const path: number[] = [];
+  let current: number | null = targetId;
+
+  while (current !== null) {
+    path.unshift(current);
+    if (current === startId) break;
+    current = previous[current];
+  }
+
+  return path[0] === startId ? path : [];
+}
+
+export function getShortestPathEdges(
+  startId: number,
+  targetId: number,
+  previous: Record<number, number | null>,
+  edges: Edge[],
+  isDirected: boolean,
+): Edge[] {
+  const path = getShortestPath(startId, targetId, previous);
+  const pathEdges: Edge[] = [];
+
+  for (let i = 0; i < path.length - 1; i++) {
+    const sourceId = path[i];
+    const targetIdInPath = path[i + 1];
+    const edge = edges.find((candidate) =>
+      edgeMatches(candidate, sourceId, targetIdInPath, isDirected),
+    );
+
+    if (!edge) {
+      return [];
+    }
+
+    pathEdges.push(edge);
+  }
+
+  return pathEdges;
+}
+
+export function getShortestPathTreeEdges(
+  previous: Record<number, number | null>,
+  edges: Edge[],
+  isDirected: boolean,
+): Edge[] {
+  const treeEdges: Edge[] = [];
+
+  for (const [nodeIdText, predecessorId] of Object.entries(previous)) {
+    if (predecessorId === null) {
+      continue;
+    }
+
+    const nodeId = Number(nodeIdText);
+    const edge = edges.find((candidate) =>
+      edgeMatches(candidate, predecessorId, nodeId, isDirected),
+    );
+
+    if (edge) {
+      treeEdges.push(edge);
+    }
+  }
+
+  return treeEdges;
+}
+
 export function generateDijkstraSteps(
   startNodeId: number,
   nodesCount: number,
-  edges: Edge[]
+  edges: Edge[],
+  isDirected: boolean,
+  targetNodeId?: number,
 ): DijkstraStep[] {
   const steps: DijkstraStep[] = [];
-  
+
   const distances: Record<number, number> = {};
   const previous: Record<number, number | null> = {};
-  const predEdge: Record<number, Edge | null> = {};
-  const mature = new Set<number>();
+  const explored = new Set<number>();
 
-  const pushStep = (baseData: any) => {
+  const pushStep = (baseData: Omit<DijkstraStep, 'distancesState' | 'previousState'>) => {
     steps.push({
       ...baseData,
       distancesState: { ...distances },
-      previousState: { ...previous }
+      previousState: { ...previous },
     });
   };
 
   for (let i = 0; i < nodesCount; i++) {
     distances[i] = Infinity;
     previous[i] = null;
-    predEdge[i] = null;
   }
-  distances[startNodeId] = 0;
-
-  pushStep({ type: 'queue', nodeId: startNodeId });
 
   const adjacency: Record<number, Edge[]> = {};
   for (let i = 0; i < nodesCount; i++) adjacency[i] = [];
   edges.forEach(e => {
     adjacency[e.sourceId].push(e);
-    adjacency[e.targetId].push({ sourceId: e.targetId, targetId: e.sourceId, weight: e.weight });
+    if (!isDirected) {
+      adjacency[e.targetId].push({ sourceId: e.targetId, targetId: e.sourceId, weight: e.weight });
+    }
   });
 
-  while (mature.size < nodesCount) {
-    let u = -1;
-    let minDistance = Infinity;
-    
-    for (let i = 0; i < nodesCount; i++) {
-      if (!mature.has(i) && distances[i] < minDistance) {
-        minDistance = distances[i];
-        u = i;
-      }
-    }
+  distances[startNodeId] = 0;
+  explored.add(startNodeId);
+  pushStep({ type: 'visit', nodeId: startNodeId });
 
-    if (u === -1) break;
+  while (explored.size < nodesCount) {
+    const cutEdges: Edge[] = [];
 
-    mature.add(u);
-    pushStep({ type: 'visit', nodeId: u });
-
-    if (predEdge[u]) {
-      pushStep({ type: 'edge', edge: predEdge[u]! });
-    }
-
-    for (const edge of adjacency[u]) {
-      const v = edge.targetId;
-      
-      if (!mature.has(v)) {
-        const newDist = distances[u] + edge.weight;
-        
-        if (newDist < distances[v]) {
-          distances[v] = newDist;
-          previous[v] = u;
-          predEdge[v] = edge; 
-          
-          pushStep({ type: 'queue', nodeId: v });
+    explored.forEach((sourceId) => {
+      for (const edge of adjacency[sourceId]) {
+        if (!explored.has(edge.targetId) && distances[sourceId] !== Infinity) {
+          cutEdges.push(edge);
         }
       }
+    });
+
+    if (cutEdges.length === 0) break;
+
+    let selectedEdge = cutEdges[0];
+    let selectedDistance = distances[selectedEdge.sourceId] + selectedEdge.weight;
+
+    for (const edge of cutEdges.slice(1)) {
+      const candidateDistance = distances[edge.sourceId] + edge.weight;
+      if (candidateDistance < selectedDistance) {
+        selectedEdge = edge;
+        selectedDistance = candidateDistance;
+      }
+    }
+
+    pushStep({ type: 'cut', cutEdges });
+    pushStep({ type: 'select-edge', edge: selectedEdge });
+
+    distances[selectedEdge.targetId] = selectedDistance;
+    previous[selectedEdge.targetId] = selectedEdge.sourceId;
+    explored.add(selectedEdge.targetId);
+
+    pushStep({ type: 'visit', nodeId: selectedEdge.targetId, edge: selectedEdge });
+
+    if (targetNodeId !== undefined && selectedEdge.targetId === targetNodeId) {
+      break;
     }
   }
 
-  steps.push({ type: 'done', previous });
-  return steps;
-}
+  const pathEdges =
+    targetNodeId !== undefined
+      ? getShortestPathEdges(startNodeId, targetNodeId, previous, edges, isDirected)
+      : getShortestPathTreeEdges(previous, edges, isDirected);
 
-export function getShortestPath(
-  startId: number, 
-  targetId: number, 
-  previous: Record<number, number | null>
-): number[] {
-  const path: number[] = [];
-  let current: number | null = targetId;
-  
-  while (current !== null) {
-    path.unshift(current);
-    if (current === startId) break;
-    current = previous[current];
-  }
-  
-  return path[0] === startId ? path : [];
+  steps.push({ type: 'done', previous, pathEdges });
+  return steps;
 }
