@@ -92,12 +92,13 @@ export function getShortestPathTreeEdges(
 
 export function generateDijkstraSteps(
   startNodeId: number,
-  nodesCount: number,
+  nodeIds: number[],
   edges: Edge[],
   isDirected: boolean,
   targetNodeId?: number,
 ): DijkstraStep[] {
   const steps: DijkstraStep[] = [];
+  const orderedNodeIds = [...nodeIds].sort((a, b) => a - b);
 
   const distances: Record<number, number> = {};
   const previous: Record<number, number | null> = {};
@@ -111,13 +112,13 @@ export function generateDijkstraSteps(
     });
   };
 
-  for (let i = 0; i < nodesCount; i++) {
-    distances[i] = Infinity;
-    previous[i] = null;
+  for (const nodeId of orderedNodeIds) {
+    distances[nodeId] = Infinity;
+    previous[nodeId] = null;
   }
 
   const adjacency: Record<number, Edge[]> = {};
-  for (let i = 0; i < nodesCount; i++) adjacency[i] = [];
+  for (const nodeId of orderedNodeIds) adjacency[nodeId] = [];
   edges.forEach(e => {
     adjacency[e.sourceId].push(e);
     if (!isDirected) {
@@ -129,7 +130,7 @@ export function generateDijkstraSteps(
   explored.add(startNodeId);
   pushStep({ type: 'visit', nodeId: startNodeId });
 
-  while (explored.size < nodesCount) {
+  while (explored.size < orderedNodeIds.length) {
     const cutEdges: Edge[] = [];
 
     explored.forEach((sourceId) => {

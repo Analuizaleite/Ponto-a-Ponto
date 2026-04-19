@@ -23,7 +23,7 @@ export interface BFSStep {
 
 export function generateBFSSteps(
   startNodeId: number,
-  nodesCount: number,
+  nodeIds: number[],
   edges: Edge[],
   isDirected: boolean,
   sortStrategy: 'ascending' | 'custom' = 'ascending',
@@ -32,6 +32,7 @@ export function generateBFSSteps(
   const steps: BFSStep[] = [];
   const visited = new Set<number>();
   const queue: number[] = [];
+  const orderedNodeIds = [...nodeIds].sort((a, b) => a - b);
 
   let lCounter = 0;
   const L: Record<number, number> = {};
@@ -39,7 +40,7 @@ export function generateBFSSteps(
   const pai: Record<number, number | null> = {};
 
   const adjacency: Record<number, Edge[]> = {};
-  for (let i = 0; i < nodesCount; i++) adjacency[i] = [];
+  for (const nodeId of orderedNodeIds) adjacency[nodeId] = [];
 
   edges.forEach(edge => {
     adjacency[edge.sourceId].push(edge);
@@ -49,17 +50,17 @@ export function generateBFSSteps(
   });
 
   if (sortStrategy === 'ascending') {
-    for (let i = 0; i < nodesCount; i++) {
-      adjacency[i].sort((a, b) => a.targetId - b.targetId);
+    for (const nodeId of orderedNodeIds) {
+      adjacency[nodeId].sort((a, b) => a.targetId - b.targetId);
     }
   } else if (sortStrategy === 'custom' && customAdjacencyOrder) {
-    for (let i = 0; i < nodesCount; i++) {
-      const desiredOrder = customAdjacencyOrder[i];
+    for (const nodeId of orderedNodeIds) {
+      const desiredOrder = customAdjacencyOrder[nodeId];
       if (desiredOrder && desiredOrder.length > 0) {
-        adjacency[i].sort((a, b) => {
+        adjacency[nodeId].sort((a, b) => {
           const indexA = desiredOrder.indexOf(a.targetId);
           const indexB = desiredOrder.indexOf(b.targetId);
-          return (indexA === -1 ? nodesCount : indexA) - (indexB === -1 ? nodesCount : indexB);
+          return (indexA === -1 ? orderedNodeIds.length : indexA) - (indexB === -1 ? orderedNodeIds.length : indexB);
         });
       }
     }
@@ -125,15 +126,15 @@ export function generateBFSSteps(
     }
   }
 
-  for (let i = 0; i < nodesCount; i++) {
-    if (!visited.has(i)) {
+  for (const nodeId of orderedNodeIds) {
+    if (!visited.has(nodeId)) {
       lCounter++;
-      L[i] = lCounter;
-      nivel[i] = 0;
-      pai[i] = null;
-      queue.push(i);
-      visited.add(i);
-      pushStep({ type: 'queue', nodeId: i });
+      L[nodeId] = lCounter;
+      nivel[nodeId] = 0;
+      pai[nodeId] = null;
+      queue.push(nodeId);
+      visited.add(nodeId);
+      pushStep({ type: 'queue', nodeId });
 
       while (queue.length > 0) {
         const currentId = queue.shift()!;

@@ -15,7 +15,7 @@ export interface DFSStep {
 
 export function generateDFSSteps(
   startNodeId: number,
-  nodesCount: number,
+  nodeIds: number[],
   edges: Edge[],
   isDirected: boolean,
   sortStrategy: 'ascending' | 'custom' = 'ascending',
@@ -24,6 +24,7 @@ export function generateDFSSteps(
   const steps: DFSStep[] = [];
   const visited = new Set<number>();
   const stack = new Set<number>();
+  const orderedNodeIds = [...nodeIds].sort((a, b) => a - b);
 
   let time = 0;
   const td: Record<number, number> = {};
@@ -31,7 +32,7 @@ export function generateDFSSteps(
   const parent: Record<number, number | null> = {};
 
   const adjacency: Record<number, Edge[]> = {};
-  for (let i = 0; i < nodesCount; i++) adjacency[i] = [];
+  for (const nodeId of orderedNodeIds) adjacency[nodeId] = [];
 
   edges.forEach(edge => {
     adjacency[edge.sourceId].push(edge);
@@ -41,19 +42,19 @@ export function generateDFSSteps(
   });
 
   if (sortStrategy === 'ascending') {
-    for (let i = 0; i < nodesCount; i++) {
-      adjacency[i].sort((a, b) => a.targetId - b.targetId);
+    for (const nodeId of orderedNodeIds) {
+      adjacency[nodeId].sort((a, b) => a.targetId - b.targetId);
     }
   } else if (sortStrategy === 'custom' && customAdjacencyOrder) {
 
-    for (let i = 0; i < nodesCount; i++) {
-      const desiredOrder = customAdjacencyOrder[i];
+    for (const nodeId of orderedNodeIds) {
+      const desiredOrder = customAdjacencyOrder[nodeId];
       if (desiredOrder && desiredOrder.length > 0) {
-        adjacency[i].sort((a, b) => {
+        adjacency[nodeId].sort((a, b) => {
           const indexA = desiredOrder.indexOf(a.targetId);
           const indexB = desiredOrder.indexOf(b.targetId);
 
-          return (indexA === -1 ? nodesCount : indexA) - (indexB === -1 ? nodesCount : indexB);
+          return (indexA === -1 ? orderedNodeIds.length : indexA) - (indexB === -1 ? orderedNodeIds.length : indexB);
         });
       }
     }
@@ -106,11 +107,11 @@ export function generateDFSSteps(
   parent[startNodeId] = null;
   dfsRecursive(startNodeId);
 
-  for (let i = 0; i < nodesCount; i++) {
-    if (!visited.has(i)) {
-      pushStep({ type: 'mark', nodeId: i });
-      parent[i] = null;
-      dfsRecursive(i);
+  for (const nodeId of orderedNodeIds) {
+    if (!visited.has(nodeId)) {
+      pushStep({ type: 'mark', nodeId });
+      parent[nodeId] = null;
+      dfsRecursive(nodeId);
     }
   }
   

@@ -75,7 +75,7 @@ export function parseDimacsFormat(content: string): DimacsGraph {
 
     for (const name of [sourceStr, targetStr]) {
       if (!vertexNameMap.has(name)) {
-        const newId = vertexNameMap.size;
+        const newId = vertexNameMap.size + 1;
         vertexNameMap.set(name, newId);
         vertexIdToName.set(newId, name);
       }
@@ -137,9 +137,9 @@ export function parseDimacsFormat(content: string): DimacsGraph {
     );
   }
 
-  const nodes = Array.from({ length: numNodes }, (_, id) => ({
-    id,
-    name: vertexIdToName.get(id)!,
+  const nodes = Array.from({ length: numNodes }, (_, index) => ({
+    id: index + 1,
+    name: vertexIdToName.get(index + 1)!,
   }));
 
   return {

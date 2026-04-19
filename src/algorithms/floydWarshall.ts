@@ -14,11 +14,12 @@ export interface FloydWarshallStep {
 }
 
 export function generateFloydWarshallSteps(
-  nodesCount: number,
+  nodeIds: number[],
   edges: Edge[],
   isDirected: boolean
 ): FloydWarshallStep[] {
   const steps: FloydWarshallStep[] = [];
+  const orderedNodeIds = [...nodeIds].sort((a, b) => a - b);
   
   const dist: Record<number, Record<number, number>> = {};
   const pred: Record<number, Record<number, number | null>> = {};
@@ -33,16 +34,16 @@ export function generateFloydWarshallSteps(
     });
   };
 
-  for (let i = 0; i < nodesCount; i++) {
-    dist[i] = {};
-    pred[i] = {};
-    for (let j = 0; j < nodesCount; j++) {
-      if (i === j) {
-        dist[i][j] = 0;
-        pred[i][j] = null;
+  for (const sourceId of orderedNodeIds) {
+    dist[sourceId] = {};
+    pred[sourceId] = {};
+    for (const targetId of orderedNodeIds) {
+      if (sourceId === targetId) {
+        dist[sourceId][targetId] = 0;
+        pred[sourceId][targetId] = null;
       } else {
-        dist[i][j] = Infinity;
-        pred[i][j] = null;
+        dist[sourceId][targetId] = Infinity;
+        pred[sourceId][targetId] = null;
       }
     }
   }
@@ -58,9 +59,9 @@ export function generateFloydWarshallSteps(
 
   pushStep({ type: 'init' });
 
-  for (let k = 0; k < nodesCount; k++) {
-    for (let i = 0; i < nodesCount; i++) {
-      for (let j = 0; j < nodesCount; j++) {
+  for (const k of orderedNodeIds) {
+    for (const i of orderedNodeIds) {
+      for (const j of orderedNodeIds) {
         
         pushStep({ type: 'evaluating', k, i, j });
 

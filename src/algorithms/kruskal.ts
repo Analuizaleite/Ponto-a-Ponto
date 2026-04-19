@@ -24,27 +24,31 @@ class UnionFind {
 }
 
 export function generateKruskalSteps(
-  nodesCount: number,
+  nodeIds: number[],
   edges: Edge[]
 ): MSTStep[] {
   const steps: MSTStep[] = [];
   const E_T: Edge[] = [];
+  const orderedNodeIds = [...nodeIds].sort((a, b) => a - b);
+  const nodeIndexMap = new Map<number, number>(
+    orderedNodeIds.map((nodeId, index) => [nodeId, index]),
+  );
 
-  for (let i = 0; i < nodesCount; i++) {
-    steps.push({ type: 'visit', nodeId: i });
+  for (const nodeId of orderedNodeIds) {
+    steps.push({ type: 'visit', nodeId });
   }
   
   const sortedEdges = [...edges].sort((a, b) => a.weight - b.weight);
   
-  const uf = new UnionFind(nodesCount);
+  const uf = new UnionFind(orderedNodeIds.length);
 
   let j = 0; 
   
-  while (E_T.length < nodesCount - 1 && j < sortedEdges.length) {
+  while (E_T.length < orderedNodeIds.length - 1 && j < sortedEdges.length) {
     const edge = sortedEdges[j];
     steps.push({ type: 'test-edge', edge });
     
-    if (uf.union(edge.sourceId, edge.targetId)) {
+    if (uf.union(nodeIndexMap.get(edge.sourceId)!, nodeIndexMap.get(edge.targetId)!)) {
       E_T.push(edge);
       
       steps.push({ type: 'edge', edge });

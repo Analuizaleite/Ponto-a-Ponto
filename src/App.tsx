@@ -91,11 +91,12 @@ const generateRandomGraph = (
   const radiusX = 220;
   const radiusY = 160;
 
-  for (let i = 0; i < numNodes; i++) {
-    const angle = (i / numNodes) * 2 * Math.PI - Math.PI / 2;
+  for (let index = 0; index < numNodes; index++) {
+    const nodeId = index + 1;
+    const angle = (index / numNodes) * 2 * Math.PI - Math.PI / 2;
     nodes.push({
-      id: i,
-      label: i.toString(),
+      id: nodeId,
+      label: nodeId.toString(),
       x: centerX + radiusX * Math.cos(angle) + (Math.random() - 0.5) * 60,
       y: centerY + radiusY * Math.sin(angle) + (Math.random() - 0.5) * 60,
     });
@@ -107,8 +108,8 @@ const generateRandomGraph = (
     minW: number,
     maxW: number,
   ) => {
-    if (source === 0 && target === numNodes - 1 && algo !== "DIJKSTRA") return;
-    if (target === 0 || source === numNodes - 1) return;
+    if (source === 1 && target === numNodes && algo !== "DIJKSTRA") return;
+    if (target === 1 || source === numNodes) return;
     if (
       edges.some(
         (e) =>
@@ -126,15 +127,15 @@ const generateRandomGraph = (
     edges.push({ sourceId: source, targetId: target, weight: weight });
   };
 
-  for (let i = 0; i < numNodes - 1; i++) addEdge(i, i + 1, 2, 6);
+  for (let i = 1; i < numNodes; i++) addEdge(i, i + 1, 2, 6);
   const numExtraEdges = Math.floor(numNodes * 1.5);
   for (let i = 0; i < numExtraEdges; i++) {
-    const s = Math.floor(Math.random() * numNodes);
-    const t = Math.floor(Math.random() * numNodes);
+    const s = Math.floor(Math.random() * numNodes) + 1;
+    const t = Math.floor(Math.random() * numNodes) + 1;
     if (s !== t && Math.abs(s - t) > 1)
       addEdge(Math.min(s, t), Math.max(s, t), 1, 9);
   }
-  if (algo === "DIJKSTRA") addEdge(0, numNodes - 1, 15, 25);
+  if (algo === "DIJKSTRA") addEdge(1, numNodes, 15, 25);
   return { nodes, edges };
 };
 
@@ -162,26 +163,27 @@ const generateDynamicLevel = (algo: string) => {
   const isDirected = algo === "FORD_FULKERSON";
 
   const { nodes, edges } = generateRandomGraph(numNodes, isWeighted, algo);
-  const startNodeId = 0;
-  const targetNodeId = numNodes - 1;
+  const nodeIds = nodes.map((node) => node.id).sort((a, b) => a - b);
+  const startNodeId = 1;
+  const targetNodeId = numNodes;
   let expectedVisits: number[] = [];
 
   if (algo === "BFS") {
-    const steps = generateBFSSteps(startNodeId, numNodes, edges, isDirected);
+    const steps = generateBFSSteps(startNodeId, nodeIds, edges, isDirected);
     expectedVisits = Array.from(
       new Set(
         steps.filter((s: any) => s.type === "visit").map((s: any) => s.nodeId),
       ),
     );
   } else if (algo === "DFS") {
-    const steps = generateDFSSteps(startNodeId, numNodes, edges, isDirected);
+    const steps = generateDFSSteps(startNodeId, nodeIds, edges, isDirected);
     expectedVisits = Array.from(
       new Set(
         steps.filter((s: any) => s.type === "visit").map((s: any) => s.nodeId),
       ),
     );
   } else if (algo === "DIJKSTRA") {
-    const steps = generateDijkstraSteps(startNodeId, numNodes, edges, isDirected, targetNodeId);
+    const steps = generateDijkstraSteps(startNodeId, nodeIds, edges, isDirected, targetNodeId);
     const lastStep = steps[steps.length - 1];
     if (lastStep && lastStep.previous)
       expectedVisits = getShortestPath(
@@ -190,7 +192,7 @@ const generateDynamicLevel = (algo: string) => {
         lastStep.previous,
       );
   } else if (algo === "PRIM") {
-    const steps = generatePrimSteps(startNodeId, numNodes, edges);
+    const steps = generatePrimSteps(startNodeId, nodeIds, edges);
     expectedVisits = [startNodeId];
     steps.forEach((s: any) => {
       if (
@@ -743,8 +745,7 @@ function App() {
 
       const startId = startNode ? startNode.id : 0;
       const targetId = targetNode ? targetNode.id : 0;
-      const nodesCount =
-        nodes.length > 0 ? Math.max(...nodes.map((n) => n.id)) + 1 : 0;
+      const nodeIds = nodes.map((node) => node.id).sort((a, b) => a - b);
 
       if (selectedAlgo === "DIJKSTRA" && edges.some((edge) => edge.weight < 0)) {
         resetVisualState();
@@ -763,30 +764,30 @@ function App() {
 
       let steps: any[] = [];
       if (selectedAlgo === "BFS")
-        steps = generateBFSSteps(startId, nodesCount, edges, isDirected, bfsSortStrategy, bfsCustomAdjacencyOrder);
+        steps = generateBFSSteps(startId, nodeIds, edges, isDirected, bfsSortStrategy, bfsCustomAdjacencyOrder);
       else if (selectedAlgo === "DFS")
-        steps = generateDFSSteps(startId, nodesCount, edges, isDirected, dfsSortStrategy, customAdjacencyOrder);
+        steps = generateDFSSteps(startId, nodeIds, edges, isDirected, dfsSortStrategy, customAdjacencyOrder);
       else if (selectedAlgo === "DIJKSTRA")
         steps = generateDijkstraSteps(
           startId,
-          nodesCount,
+          nodeIds,
           edges,
           isDirected,
           dijkstraUseTarget ? targetNode?.id : undefined,
         );
       else if (selectedAlgo === "PRIM")
-        steps = generatePrimSteps(startId, nodesCount, edges);
+        steps = generatePrimSteps(startId, nodeIds, edges);
       else if (selectedAlgo === "KRUSKAL")
-        steps = generateKruskalSteps(nodesCount, edges);
+        steps = generateKruskalSteps(nodeIds, edges);
       else if (selectedAlgo === "BELLMAN_FORD")
         steps = generateBellmanFordSteps(
           startId,
-          nodesCount,
+          nodeIds,
           edges,
           isDirected,
         );
       else if (selectedAlgo === "FLOYD_WARSHALL")
-        steps = generateFloydWarshallSteps(nodesCount, edges, isDirected);
+        steps = generateFloydWarshallSteps(nodeIds, edges, isDirected);
       else if (selectedAlgo === "FORD_FULKERSON")
         steps = generateFordFulkersonSteps(
           startId,
@@ -817,14 +818,14 @@ function App() {
     try {
       const positions = calculateCircleLayout(dimacsGraph.nodeCount);
       const newNodes: Node[] = [];
-      for (let i = 0; i < dimacsGraph.nodeCount; i++) {
+      for (let i = 1; i <= dimacsGraph.nodeCount; i++) {
         const node = dimacsGraph.nodes.find(n => n.id === i);
         newNodes.push({
           id: i,
           label: node ? node.name : i.toString(),
           vertexName: node ? node.name : i.toString(),
-          x: positions[i].x,
-          y: positions[i].y,
+          x: positions[i - 1].x,
+          y: positions[i - 1].y,
         });
       }
 
@@ -968,7 +969,7 @@ function App() {
 
       const customLabel = customNodeId.trim();
       const usedIds = new Set(nodes.map((n) => n.id));
-      let newInternalId = 0;
+      let newInternalId = 1;
       while (usedIds.has(newInternalId)) newInternalId++;
       let newLabel =
         customLabel !== "" ? customLabel : newInternalId.toString();

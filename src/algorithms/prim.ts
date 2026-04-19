@@ -12,24 +12,25 @@ export interface MSTStep {
 
 export function generatePrimSteps(
   startNodeId: number,
-  nodesCount: number,
+  nodeIds: number[],
   edges: Edge[]
 ): MSTStep[] {
   const steps: MSTStep[] = [];
   const V_T = new Set<number>();
   const E_T: Edge[] = [];
+  const orderedNodeIds = [...nodeIds].sort((a, b) => a - b);
 
   V_T.add(startNodeId);
   steps.push({ type: 'visit', nodeId: startNodeId });
   
   const adj: Record<number, Edge[]> = {};
-  for (let i = 0; i < nodesCount; i++) adj[i] = [];
+  for (const nodeId of orderedNodeIds) adj[nodeId] = [];
   for (const edge of edges) {
     adj[edge.sourceId].push(edge);
     adj[edge.targetId].push(edge);
   }
 
-  while (V_T.size < nodesCount) {
+  while (V_T.size < orderedNodeIds.length) {
     let minEdge: Edge | null = null;
     let minCost = Infinity;
     let newNode = -1;

@@ -18,11 +18,12 @@ export interface BellmanFordStep {
 
 export function generateBellmanFordSteps(
   startNodeId: number,
-  nodesCount: number,
+  nodeIds: number[],
   edges: Edge[],
   isDirected: boolean,
 ): BellmanFordStep[] {
   const steps: BellmanFordStep[] = [];
+  const orderedNodeIds = [...nodeIds].sort((a, b) => a - b);
 
   const distances: Record<number, number> = {};
   const previous: Record<number, number | null> = {};
@@ -47,15 +48,15 @@ export function generateBellmanFordSteps(
     });
   };
 
-  for (let i = 0; i < nodesCount; i++) {
-    distances[i] = Infinity;
-    previous[i] = null;
-    predEdges[i] = null;
+  for (const nodeId of orderedNodeIds) {
+    distances[nodeId] = Infinity;
+    previous[nodeId] = null;
+    predEdges[nodeId] = null;
   }
   distances[startNodeId] = 0;
   pushStep({ type: "visit", nodeId: startNodeId, iteration: 0 });
 
-  for (let i = 1; i <= nodesCount - 1; i++) {
+  for (let i = 1; i <= orderedNodeIds.length - 1; i++) {
     pushStep({ type: "iteration", iteration: i });
     let relaxedInThisPhase = false;
 
