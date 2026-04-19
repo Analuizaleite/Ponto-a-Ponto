@@ -27,14 +27,14 @@ const ALGO_INFO: Record<string, AlgoInfo> = {
   BFS: {
     name: "Busca em Largura",
     emoji: "🌊",
-    tagline: "Explora o grafo em ondas, camada por camada.",
+    tagline: "Explore o grafo em ondas, camada por camada.",
     analogy:
-      "Imagine jogar uma pedra num lago. As ondas se expandem em círculos perfeitos — primeiro os vizinhos mais próximos, depois os vizinhos dos vizinhos. A BFS funciona exatamente assim.",
+      "Imagine jogar uma pedra num lago. As ondas se expandem em círculos perfeitos: primeiro os vizinhos mais próximos, depois os vizinhos dos vizinhos. A BFS funciona exatamente assim.",
     howItWorks: [
-      "Coloca o nó inicial numa fila.",
-      "Retira o primeiro da fila e visita todos os seus vizinhos diretos.",
+      "Coloque o nó inicial numa fila.",
+      "Retire o primeiro da fila e visite todos os seus vizinhos diretos.",
       "Cada vizinho novo entra no final da fila.",
-      "Repete até a fila esvaziar.",
+      "Repita até a fila esvaziar.",
     ],
     complexity: {
       time: "O(V + E)",
@@ -55,14 +55,14 @@ const ALGO_INFO: Record<string, AlgoInfo> = {
   DFS: {
     name: "Busca em Profundidade",
     emoji: "🕳️",
-    tagline: "Mergulha fundo num caminho antes de explorar outros.",
+    tagline: "Mergulhe fundo num caminho antes de explorar outros.",
     analogy:
-      "Resolver um labirinto sempre virando à esquerda — você vai até o fundo de cada corredor antes de voltar e tentar o próximo. Só recua quando chega num beco sem saída.",
+      "Resolver um labirinto sempre virando à esquerda. Onde você vai até o fundo de cada corredor antes de voltar e tentar o próximo. Só recue quando chegar num beco sem saída.",
     howItWorks: [
-      "Visita o nó inicial.",
-      "Vai imediatamente para o primeiro vizinho não visitado.",
-      "Continua mergulhando até não ter mais vizinhos novos.",
-      "Recua (backtrack) e tenta o próximo vizinho disponível.",
+      "Visite o nó inicial.",
+      "Vá imediatamente para o primeiro vizinho não visitado.",
+      "Continue mergulhando até não ter mais vizinhos novos.",
+      "Recue e tente o próximo vizinho disponível.",
     ],
     complexity: {
       time: "O(V + E)",
@@ -75,7 +75,7 @@ const ALGO_INFO: Record<string, AlgoInfo> = {
       { color: "bg-[#3aebb9]", label: "Aresta de árvore (caminho percorrido)" },
       { color: "bg-red-500", label: "Aresta de retorno (indica ciclo!)" },
     ],
-    tip: "Na tabela: TD = tempo de descoberta, TT = tempo de término. Um nó 'contém' todos os nós descobertos entre seu TD e TT.",
+    tip: "Na tabela: TD = tempo de descoberta, TT = tempo de término.",
   },
   DIJKSTRA: {
     name: "Algoritmo de Dijkstra",
@@ -84,10 +84,10 @@ const ALGO_INFO: Record<string, AlgoInfo> = {
     analogy:
       "Um GPS que sempre escolhe a rota com menor tempo total acumulado — não a com menos cruzamentos, mas a mais rápida considerando o trânsito de cada trecho.",
     howItWorks: [
-      "Define distância 0 para o nó inicial e ∞ para todos os outros.",
-      "Escolhe o nó não visitado com menor distância acumulada.",
-      "Para cada vizinho: 'passar por aqui é mais barato?' Se sim, atualiza.",
-      "Repete até visitar todos os nós.",
+      "Defina distância 0 para o nó inicial e ∞ para todos os outros.",
+      "Escolha o nó não visitado com menor distância acumulada.",
+      "Para cada vizinho: 'passar por aqui é mais barato?' Se sim, atualize.",
+      "Repita até visitar todos os nós.",
     ],
     complexity: {
       time: "O(V²)",
@@ -106,11 +106,11 @@ const ALGO_INFO: Record<string, AlgoInfo> = {
     emoji: "🔁",
     tagline: "Menor caminho com pesos negativos e detecção de ciclos.",
     analogy:
-      "Um contador que revisa todas as contas N-1 vezes para garantir que nenhum desconto foi perdido. Se na última revisão ainda encontrar desconto, há uma armadilha — um ciclo negativo infinito.",
+      "Um contador que revisa todas as contas N-1 vezes para garantir que nenhum desconto foi perdido. Se na última revisão ainda encontrar desconto, há uma armadilha, um ciclo negativo infinito.",
     howItWorks: [
-      "Define distância 0 para o nó inicial e ∞ para os demais.",
-      "Repete N-1 vezes: percorre TODAS as arestas e relaxa as que puder.",
-      "'Relaxar' = se passar por essa aresta for mais barato, atualiza.",
+      "Defina distância 0 para o nó inicial e ∞ para os demais.",
+      "Repita N-1 vezes: percorre TODAS as arestas e relaxa as que puder.",
+      "'Relaxar' = se passar por essa aresta for mais barato, atualize.",
       "Passagem extra: se ainda relaxar, existe um ciclo negativo.",
     ],
     complexity: {
@@ -131,7 +131,7 @@ const ALGO_INFO: Record<string, AlgoInfo> = {
     emoji: "📊",
     tagline: "Menor caminho entre TODOS os pares de nós de uma vez.",
     analogy:
-      "Uma tabela de preços de passagens aéreas entre todas as cidades — você quer saber o menor preço de qualquer cidade para qualquer outra, incluindo conexões.",
+      "Uma tabela de preços de passagens aéreas entre todas as cidades. Você quer saber o menor preço de qualquer cidade para qualquer outra, incluindo conexões.",
     howItWorks: [
       "Cria uma matriz N×N com as distâncias diretas entre os nós.",
       "Para cada nó intermediário K: 'passar por K melhora algum caminho?'",
@@ -157,10 +157,10 @@ const ALGO_INFO: Record<string, AlgoInfo> = {
     analogy:
       "Você precisa construir estradas para conectar todas as cidades com o menor custo. Prim começa de uma cidade e sempre constrói a estrada mais barata que alcança uma cidade nova.",
     howItWorks: [
-      "Começa com um conjunto contendo só o nó inicial.",
-      "Olha todas as arestas que saem do conjunto para fora.",
-      "Escolhe a de menor peso e adiciona o nó destino ao conjunto.",
-      "Repete até todos os nós estarem conectados.",
+      "Comece com um conjunto contendo só o nó inicial.",
+      "Olhe todas as arestas que saem do conjunto para fora.",
+      "Escolha a de menor peso e adicione o nó destino ao conjunto.",
+      "Repita até todos os nós estarem conectados.",
     ],
     complexity: {
       time: "O(V²)",
@@ -179,12 +179,12 @@ const ALGO_INFO: Record<string, AlgoInfo> = {
     emoji: "🔗",
     tagline: "Árvore Geradora Mínima ordenando todas as arestas.",
     analogy:
-      "Você tem uma lista de todas as estradas possíveis ordenadas por custo. Vai construindo da mais barata para a mais cara, pulando qualquer uma que criaria um caminho circular.",
+      "Você tem uma lista de todas as estradas possíveis ordenadas por custo. Vá construindo da mais barata para a mais cara, pulando qualquer uma que criaria um caminho circular.",
     howItWorks: [
-      "Ordena todas as arestas por peso crescente.",
+      "Ordene todas as arestas por peso crescente.",
       "Para cada aresta (da mais barata para a mais cara):",
-      "→ Conecta dois componentes diferentes: adiciona à árvore.",
-      "→ Os dois nós já estão conectados: descarta (formaria ciclo).",
+      "→ Conecte dois componentes diferentes: adicione à árvore.",
+      "→ Os dois nós já estão conectados: descarte (formaria ciclo).",
     ],
     complexity: {
       time: "O(E log E)",
@@ -206,11 +206,11 @@ const ALGO_INFO: Record<string, AlgoInfo> = {
     analogy:
       "Uma rede de canos conectando um reservatório a uma cidade. Cada cano tem capacidade máxima. Você quer descobrir o máximo de água que consegue enviar por dia.",
     howItWorks: [
-      "Começa com fluxo zero em todas as arestas.",
-      "Encontra um caminho da fonte ao destino com espaço livre (BFS).",
-      "Descobre o gargalo: a menor capacidade residual do caminho.",
-      "Aumenta o fluxo pelo valor do gargalo em todo o caminho.",
-      "Repete até não existir mais nenhum caminho com espaço livre.",
+      "Comece com fluxo zero em todas as arestas.",
+      "Encontre um caminho da fonte ao destino com espaço livre (BFS).",
+      "Descubra o gargalo: a menor capacidade residual do caminho.",
+      "Aumente o fluxo pelo valor do gargalo em todo o caminho.",
+      "Repita até não existir mais nenhum caminho com espaço livre.",
     ],
     complexity: {
       time: "O(V · E²)",
@@ -249,12 +249,10 @@ export const AlgorithmExplainerModal: React.FC<AlgorithmExplainerModalProps> = (
         "
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Drag handle — mobile only */}
         <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-10 h-1 bg-ponto-muted/60 rounded-full" />
         </div>
 
-        {/* Header */}
         <div className="flex items-start justify-between px-5 pt-3 sm:pt-5 pb-3 shrink-0">
           <div className="flex items-center gap-3">
             <span className="text-3xl sm:text-4xl">{info.emoji}</span>
@@ -274,19 +272,15 @@ export const AlgorithmExplainerModal: React.FC<AlgorithmExplainerModalProps> = (
           </button>
         </div>
 
-        {/* Content */}
         <div className="overflow-y-auto px-5 pb-2 flex-1 flex flex-col gap-4">
 
-          {/* Analogia */}
           <div className="bg-ponto-dark border-l-4 border-ponto-accent rounded-r-xl p-3 sm:p-4">
             <p className="text-ponto-accent text-[10px] font-bold uppercase tracking-wider mb-1">💡 A ideia</p>
             <p className="text-slate-200 text-xs sm:text-sm leading-relaxed">{info.analogy}</p>
           </div>
 
-          {/* Como funciona + Complexidade lado a lado em mobile */}
           <div className="flex flex-col sm:flex-col gap-4">
 
-            {/* Como funciona */}
             <div>
               <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">⚙️ Como funciona</p>
               <ol className="flex flex-col gap-1.5">
@@ -307,7 +301,6 @@ export const AlgorithmExplainerModal: React.FC<AlgorithmExplainerModalProps> = (
               </ol>
             </div>
 
-            {/* Complexidade */}
             <div>
               <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">📈 Complexidade</p>
               <div className="grid grid-cols-2 gap-2">
@@ -329,7 +322,6 @@ export const AlgorithmExplainerModal: React.FC<AlgorithmExplainerModalProps> = (
             </div>
           </div>
 
-          {/* O que observar */}
           <div>
             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">🎨 O que observar</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -342,14 +334,12 @@ export const AlgorithmExplainerModal: React.FC<AlgorithmExplainerModalProps> = (
             </div>
           </div>
 
-          {/* Dica */}
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
             <p className="text-amber-400 text-[10px] font-bold uppercase tracking-wider mb-1">📌 Dica</p>
             <p className="text-slate-300 text-[11px] sm:text-xs leading-relaxed">{info.tip}</p>
           </div>
         </div>
 
-        {/* Footer */}
         <div className="px-5 py-4 border-t border-ponto-muted/30 flex gap-3 shrink-0">
           <button
             onClick={onClose}
