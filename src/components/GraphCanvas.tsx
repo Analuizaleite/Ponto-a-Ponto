@@ -30,6 +30,8 @@ interface GraphCanvasProps {
   dijkstraCutEdges?: Set<string>;
   dijkstraPathEdges?: Set<string>;
   dijkstraSelectedEdge?: Edge | null;
+  negativeWeightEdges?: Set<string>;
+  warningMessage?: string | null;
 
   transform: { x: number; y: number; k: number };
   onCanvasMouseDown: (e: React.MouseEvent | React.TouchEvent) => void;
@@ -74,6 +76,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   dijkstraCutEdges = new Set(),
   dijkstraPathEdges = new Set(),
   dijkstraSelectedEdge = null,
+  negativeWeightEdges = new Set(),
+  warningMessage = null,
   transform,
   onCanvasMouseDown,
   onCanvasMouseMove,
@@ -236,6 +240,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 dijkstraPathEdges.has(getDirectedAwareEdgeKey(edge));
               const isDijkstraSelectedEdge =
                 selectedAlgo === "DIJKSTRA" && matchesEdge(edge, dijkstraSelectedEdge);
+              const isNegativeWeightEdge =
+                negativeWeightEdges.has(getDirectedAwareEdgeKey(edge));
 
               const isAugmenting = currentAugmentingPath.some(
                 (ae) =>
@@ -274,6 +280,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                 ? "#ef4444"
                 : isKruskalCycleEdge
                   ? "#ef4444"
+                : isNegativeWeightEdge
+                  ? "#dc2626"
                 : isBellmanCycleCheckEdge
                   ? "#ec4899"
                 : isDijkstraPathEdge
@@ -302,8 +310,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                                   ? "#3aebb9"
                                   : baseStyle.color;
 
-              const lineWidth = isBellmanCycleCheckEdge || isDijkstraSelectedEdge || isDijkstraPathEdge || isAugmenting ? "4" : baseStyle.width;
-              const lineDash = isBackEdge ? "8 4" : undefined;
+              const lineWidth = isNegativeWeightEdge || isBellmanCycleCheckEdge || isDijkstraSelectedEdge || isDijkstraPathEdge || isAugmenting ? "4" : baseStyle.width;
+              const lineDash = isBackEdge || isNegativeWeightEdge ? "8 4" : undefined;
               const markerEnd =
                 !isDirected
                   ? undefined
@@ -435,6 +443,17 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           </g>
         </g>
       </svg>
+
+      {warningMessage && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-[min(92%,42rem)] rounded-xl border border-amber-500/60 bg-amber-50/95 px-4 py-3 shadow-lg backdrop-blur-sm">
+          <p className="text-sm font-semibold text-amber-900">
+            Execução bloqueada
+          </p>
+          <p className="mt-1 text-sm text-amber-800">
+            {warningMessage}
+          </p>
+        </div>
+      )}
 
       <div className="absolute bottom-6 md:bottom-6 top-4 md:top-auto left-4 md:left-6 flex flex-col gap-2">
         <button

@@ -383,6 +383,8 @@ function App() {
   const [dijkstraCutEdges, setDijkstraCutEdges] = useState<Set<string>>(new Set());
   const [dijkstraPathEdges, setDijkstraPathEdges] = useState<Set<string>>(new Set());
   const [dijkstraSelectedEdge, setDijkstraSelectedEdge] = useState<Edge | null>(null);
+  const [canvasWarningMessage, setCanvasWarningMessage] = useState<string | null>(null);
+  const [negativeWeightEdges, setNegativeWeightEdges] = useState<Set<string>>(new Set());
   const [bfDistances, setBfDistances] = useState<Record<number, number>>({});
   const [bfPrevious, setBfPrevious] = useState<Record<number, number | null>>(
     {},
@@ -444,6 +446,8 @@ function App() {
     setDijkstraCutEdges(new Set());
     setDijkstraPathEdges(new Set());
     setDijkstraSelectedEdge(null);
+    setCanvasWarningMessage(null);
+    setNegativeWeightEdges(new Set());
     setDfsTD({});
     setDfsTT({});
     setBfsL({});
@@ -704,6 +708,7 @@ function App() {
   const playAnimation = () => {
     if (animationStatus === "playing") return;
     if (animationStatus === "idle") {
+      setCanvasWarningMessage(null);
       let startNode, targetNode;
       if (
         selectedAlgo !== "KRUSKAL" &&
@@ -740,6 +745,21 @@ function App() {
       const targetId = targetNode ? targetNode.id : 0;
       const nodesCount =
         nodes.length > 0 ? Math.max(...nodes.map((n) => n.id)) + 1 : 0;
+
+      if (selectedAlgo === "DIJKSTRA" && edges.some((edge) => edge.weight < 0)) {
+        resetVisualState();
+        setNegativeWeightEdges(
+          new Set(
+            edges
+              .filter((edge) => edge.weight < 0)
+              .map((edge) => getDirectedAwareEdgeKey(edge, isDirected)),
+          ),
+        );
+        setCanvasWarningMessage(
+          "O Dijkstra não pode ser executado com arestas de peso negativo. Use o Bellman-Ford para calcular esse caminho mínimo.",
+        );
+        return;
+      }
 
       let steps: any[] = [];
       if (selectedAlgo === "BFS")
@@ -1223,6 +1243,8 @@ function App() {
               dijkstraCutEdges={dijkstraCutEdges}
               dijkstraPathEdges={dijkstraPathEdges}
               dijkstraSelectedEdge={dijkstraSelectedEdge}
+              negativeWeightEdges={negativeWeightEdges}
+              warningMessage={canvasWarningMessage}
             />
 
             <aside className="hidden md:flex flex-col w-80 h-full absolute right-0 top-0 bg-ponto-dark border-l border-ponto-muted/50 p-6 shadow-xl z-10 gap-6 overflow-y-auto">
