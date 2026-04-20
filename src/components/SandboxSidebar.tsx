@@ -16,16 +16,16 @@ export const ALGORITHM_MODULES: Record<
   caminhos: {
     title: "Caminhos Mínimos",
     algos: [
-      { id: "DIJKSTRA", name: "Algoritmo de Dijkstra" },
-      { id: "BELLMAN_FORD", name: "Algoritmo de Bellman-Ford" },
+      { id: "DIJKSTRA", name: "Dijkstra" },
+      { id: "BELLMAN_FORD", name: "Bellman-Ford" },
       { id: "FLOYD_WARSHALL", name: "Floyd-Warshall" },
     ],
   },
   arvores: {
     title: "Árvores Geradoras",
     algos: [
-      { id: "PRIM", name: "Algoritmo de Prim" },
-      { id: "KRUSKAL", name: "Algoritmo de Kruskal" },
+      { id: "PRIM", name: "Prim" },
+      { id: "KRUSKAL", name: "Kruskal" },
     ],
   },
   fluxos: {
@@ -157,6 +157,15 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
     setSelectedAlgo(e.target.value);
     onStop();
   };
+
+  const sortedNodes = [...nodes].sort((left, right) => {
+    const byLabel = left.label.localeCompare(right.label, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
+
+    return byLabel !== 0 ? byLabel : left.id - right.id;
+  });
 
   const getNodeLabel = (id: number) =>
     nodes.find((n) => n.id === id)?.label || id.toString();
@@ -894,7 +903,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {nodes.map((node) => {
+                  {sortedNodes.map((node) => {
                     const d = dijkstraDistances[node.id];
                     const p = dijkstraPrevious[node.id];
                     return (
@@ -1027,7 +1036,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {nodes.map((node) => {
+                  {sortedNodes.map((node) => {
                     const d = bfDistances[node.id];
                     const p = bfPrevious[node.id];
                     return (
@@ -1058,6 +1067,22 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
       {selectedAlgo === "FLOYD_WARSHALL" &&
         Object.keys(fwDistances).length > 0 && (
           <div className="border-t border-ponto-muted/30 pt-4">
+            <div className="mb-4">
+              <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider mb-3">
+                Legenda Floyd-Warshall
+              </h2>
+              <div className="bg-ponto-darker rounded-lg border border-ponto-muted/40 p-4 shadow-inner space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="w-4 h-4 rounded-sm bg-purple-500/30 border border-purple-400" />
+                  <span className="text-xs text-slate-300">Linha/coluna do nó intermediário K</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="w-4 h-4 rounded-sm bg-amber-400 border border-amber-300" />
+                  <span className="text-xs text-slate-300">Célula i→j sendo avaliada</span>
+                </div>
+              </div>
+            </div>
+
             <div className="flex justify-between items-center mb-3">
               <h2 className="text-sm font-bold text-ponto-accent uppercase tracking-wider">
                 Matriz de Distâncias D
@@ -1073,7 +1098,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                 <thead className="bg-ponto-dark text-ponto-accent border-b border-ponto-muted/50">
                   <tr>
                     <th className="p-2 border-r border-ponto-muted/30"></th>
-                    {nodes.map((n) => (
+                    {sortedNodes.map((n) => (
                       <th
                         key={n.id}
                         className={`p-2 font-bold ${fwK === n.id ? "bg-purple-500/20 text-purple-300" : ""}`}
@@ -1084,7 +1109,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {nodes.map((rowNode) => (
+                  {sortedNodes.map((rowNode) => (
                     <tr
                       key={rowNode.id}
                       className="border-b border-ponto-muted/20 last:border-0"
@@ -1094,7 +1119,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                       >
                         {rowNode.label}
                       </th>
-                      {nodes.map((colNode) => {
+                      {sortedNodes.map((colNode) => {
                         const val = fwDistances[rowNode.id]?.[colNode.id];
                         const isCurrent =
                           fwI === rowNode.id && fwJ === colNode.id;
@@ -1114,6 +1139,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                 </tbody>
               </table>
             </div>
+
           </div>
         )}
 
@@ -1133,7 +1159,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {nodes.map((n) => (
+                {sortedNodes.map((n) => (
                   <tr
                     key={n.id}
                     className="border-b border-ponto-muted/20 hover:bg-ponto-muted/10"
@@ -1147,8 +1173,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                     </td>
                     <td className="p-2 font-mono text-yellow-500">
                       {dfsPai[n.id] !== undefined && dfsPai[n.id] !== null
-                        ? (nodes.find((node) => node.id === dfsPai[n.id])
-                            ?.label ?? dfsPai[n.id])
+                        ? getNodeLabel(dfsPai[n.id]!)
                         : "Ø"}
                     </td>
                   </tr>
@@ -1211,7 +1236,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {nodes.map((n) => (
+                {sortedNodes.map((n) => (
                   <tr
                     key={n.id}
                     className="border-b border-ponto-muted/20 hover:bg-ponto-muted/10"
