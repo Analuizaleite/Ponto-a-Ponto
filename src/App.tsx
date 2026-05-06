@@ -8,6 +8,7 @@ import { SandboxSidebar } from "./components/SandboxSidebar";
 import { GameSidebar } from "./components/GameSidebar";
 import { DimacsImportModal } from "./components/DimacsImportModal";
 import { AlgorithmExplainerModal } from "./components/AlgorithmExplainerModal";
+import { ChallengeDebriefModal } from "./components/ChallengeDebriefModal";
 
 // --- DADOS E ASSETS ---
 import logoImage from "./assets/logo_transparente.png";
@@ -415,6 +416,9 @@ function App() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showAlgoExplainer, setShowAlgoExplainer] = useState(false);
   const [seenAlgos, setSeenAlgos] = useState<Set<string>>(new Set());
+  const [showChallengeDebrief, setShowChallengeDebrief] = useState(false);
+  const [debriefThemeTitle, setDebriefThemeTitle] = useState("");
+  const [debriefAlgorithms, setDebriefAlgorithms] = useState<string[]>([]);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 3000);
@@ -887,7 +891,16 @@ function App() {
     const theme = GAME_THEMES.find((t) => t.id === selectedThemeId);
     if (theme && currentLevelIndex < theme.levels.length - 1)
       loadLevel(selectedThemeId, currentLevelIndex + 1);
-    else setGamePhase("HUB");
+    else if (theme) {
+      const uniqueAlgorithms = Array.from(
+        new Set(theme.levels.map((level) => level.algo)),
+      );
+      setDebriefThemeTitle(theme.title);
+      setDebriefAlgorithms(uniqueAlgorithms);
+      setShowChallengeDebrief(true);
+    } else {
+      setGamePhase("HUB");
+    }
   };
 
   const getEventCoords = (e: React.MouseEvent | React.TouchEvent) => {
@@ -1317,6 +1330,13 @@ function App() {
                   loadLevel={() => {}}
                   resetGame={resetGame}
                   nextLevel={nextLevel}
+                  isLastLevel={
+                    !!selectedThemeId &&
+                    currentLevelIndex ===
+                      (GAME_THEMES.find((t) => t.id === selectedThemeId)?.levels
+                        .length ?? 1) -
+                        1
+                  }
                   onReturnToHub={() => setGamePhase("HUB")}
                 />
               )}
@@ -1391,6 +1411,13 @@ function App() {
                   loadLevel={() => {}}
                   resetGame={resetGame}
                   nextLevel={nextLevel}
+                  isLastLevel={
+                    !!selectedThemeId &&
+                    currentLevelIndex ===
+                      (GAME_THEMES.find((t) => t.id === selectedThemeId)?.levels
+                        .length ?? 1) -
+                        1
+                  }
                   onReturnToHub={() => setGamePhase("HUB")}
                 />
               )}
@@ -1408,6 +1435,16 @@ function App() {
           algo={selectedAlgo}
           onClose={() => setShowAlgoExplainer(false)}
           onConfirm={confirmAndPlay}
+        />
+      )}
+      {showChallengeDebrief && (
+        <ChallengeDebriefModal
+          title={debriefThemeTitle}
+          algorithms={debriefAlgorithms}
+          onClose={() => {
+            setShowChallengeDebrief(false);
+            setGamePhase("HUB");
+          }}
         />
       )}
     </div>

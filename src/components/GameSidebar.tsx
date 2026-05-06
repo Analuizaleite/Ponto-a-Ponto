@@ -18,6 +18,7 @@ export interface GameSidebarProps {
   lives: number;
   gameStatus: "playing" | "won" | "lost";
   playerPath: number[];
+  isLastLevel: boolean;
   loadLevel: (themeId: string, levelIdx: number) => void;
   resetGame: () => void;
   nextLevel: () => void;
@@ -29,6 +30,7 @@ export const GameSidebar: React.FC<GameSidebarProps> = ({
   lives,
   gameStatus,
   playerPath,
+  isLastLevel,
   resetGame,
   nextLevel,
   onReturnToHub
@@ -138,7 +140,9 @@ export const GameSidebar: React.FC<GameSidebarProps> = ({
                 {lives === 2 && "Muito bom trabalho! Apenas um pequeno deslize, operação bem sucedida."}
                 {lives === 1 && "Foi por um triz! Missão concluída, mas recomendamos revisar a teoria."}
               </p>
-              <button onClick={nextLevel} className="w-full bg-ponto-accent text-ponto-darker font-bold py-2.5 rounded-lg hover:brightness-110 transition-all text-sm">Continuar Missão</button>
+              <button onClick={nextLevel} className="w-full bg-ponto-accent text-ponto-darker font-bold py-2.5 rounded-lg hover:brightness-110 transition-all text-sm">
+                {isLastLevel ? "Finalizar Missões" : "Continuar Missão"}
+              </button>
             </div>
           )}
 
@@ -237,7 +241,9 @@ export const GameSidebar: React.FC<GameSidebarProps> = ({
               {lives === 2 && "Muito bom trabalho!"}
               {lives === 1 && "Foi por um triz!"}
             </p>
-            <button onClick={nextLevel} className="w-full bg-ponto-accent text-ponto-darker font-bold py-2 rounded-lg text-sm">Continuar</button>
+            <button onClick={nextLevel} className="w-full bg-ponto-accent text-ponto-darker font-bold py-2 rounded-lg text-sm">
+              {isLastLevel ? "Finalizar Missões" : "Continuar"}
+            </button>
           </div>
         )}
 
