@@ -7,6 +7,12 @@ interface DebriefInfo {
   pseudocode: string;
 }
 
+interface FlowVariantInfo {
+  title: string;
+  summary: string;
+  pseudocode: string;
+}
+
 interface ChallengeDebriefModalProps {
   title: string;
   algorithms: string[];
@@ -18,34 +24,47 @@ const DEBRIEF_INFO: Record<string, DebriefInfo> = {
     title: "Busca em Largura (BFS)",
     summary:
       "Explora o grafo por camadas. Primeiro visita os vizinhos imediatos, depois os vizinhos dos vizinhos. Ideal para menor número de arestas em grafo sem pesos.",
-    pseudocode: `BFS(G, s)
-  para cada vertice v em G:
-    visitado[v] <- falso
-  fila <- vazia
-  visitado[s] <- verdadeiro
-  enfileirar(fila, s)
+    pseudocode: `BFS(G)
+  t <- 0; Fila <- vazia
+  para cada vértice v em G:
+    L[v] <- 0; nível[v] <- 0; pai[v] <- null
+  enquanto existir v com L[v] = 0:
+    t <- t + 1; L[v] <- t; nível[v] <- 0; pai[v] <- null
+    Fila.Insere(v)
+    Busca_Largura()
 
-  enquanto fila nao vazia:
-    u <- desenfileirar(fila)
-    para cada vizinho v de u:
-      se visitado[v] = falso:
-        visitado[v] <- verdadeiro
-        enfileirar(fila, v)`,
+Busca_Largura()
+  enquanto Fila não vazia:
+    v <- Fila.Remove()
+    para cada vizinho w de v:
+      se L[w] = 0:
+        pai[w] <- v; nível[w] <- nível[v]+1
+        t <- t+1; L[w] <- t; Fila.Insere(w)  // aresta de árvore
+      senão se nível[w] = nível[v]+1:
+        visitar aresta tio {v, w}
+      senão se nível[w] = nível[v] e pai[v]=pai[w] e L[w]>L[v]:
+        visitar aresta irmão {v, w}
+      senão se nível[w] = nível[v] e pai[v]≠pai[w] e L[w]>L[v]:
+        visitar aresta primo {v, w}`,
   },
   DFS: {
     title: "Busca em Profundidade (DFS)",
     summary:
       "Segue um caminho até o fundo antes de voltar. Muito útil para detectar componentes, ciclos e realizar ordenações topológicas.",
-    pseudocode: `DFS(G, s)
-  para cada vertice v em G:
-    visitado[v] <- falso
-  DFS_VISIT(s)
+    pseudocode: `DFS(G)
+  t <- 0
+  para cada vértice v em G:
+    TD[v] <- 0; TT[v] <- 0; pai[v] <- null
+  enquanto existir v com TD[v] = 0:
+    DFS_VISIT(v)
 
 DFS_VISIT(u)
-  visitado[u] <- verdadeiro
+  t <- t + 1; TD[u] <- t
   para cada vizinho v de u:
-    se visitado[v] = falso:
-      DFS_VISIT(v)`,
+    se TD[v] = 0:
+      pai[v] <- u
+      DFS_VISIT(v)
+  t <- t + 1; TT[u] <- t`,
   },
   DIJKSTRA: {
     title: "Dijkstra",
@@ -71,62 +90,76 @@ DFS_VISIT(u)
     title: "Prim",
     summary:
       "Constrói uma árvore geradora mínima crescendo a partir de um nó inicial. A cada passo escolhe a menor aresta que conecta um nó novo.",
-    pseudocode: `PRIM(G, s)
-  T <- {s}
-  MST <- vazio
+    pseudocode: `PRIM(G)
+  escolher um vértice r em V(G)
+  V(T) <- {r}
+  E(T) <- vazio
 
-  enquanto |T| < numero de vertices:
-    escolha aresta (u, v) de menor peso
-    com u em T e v fora de T
-    adicionar (u, v) em MST
-    adicionar v em T
+  enquanto V(T) != V(G):
+    encontrar aresta (v, w) de menor custo
+    com v em V(T) e w fora de V(T)
+    adicionar w em V(T)
+    adicionar (v, w) em E(T)
 
-  retornar MST`,
+  retornar T = (V(T), E(T))`,
   },
   KRUSKAL: {
     title: "Kruskal",
     summary:
       "Ordena as arestas por peso e adiciona as menores sem formar ciclo. Muito eficiente com estrutura Union-Find.",
     pseudocode: `KRUSKAL(G)
-  ordenar arestas por peso crescente
-  criar UnionFind para vertices
-  MST <- vazio
+  ordenar arestas e1, e2, e3, ... em ordem não decrescente
+  V(T) <- V(G)
+  E(T) <- {e1}
+  j <- 2
 
-  para cada aresta (u, v) ordenada:
-    se FIND(u) != FIND(v):
-      adicionar (u, v) em MST
-      UNION(u, v)
+  enquanto |E(T)| < |V(T)| - 1:
+    se aresta ej não forma ciclo com E(T):
+      adicionar ej em E(T)
+    j <- j + 1
 
-  retornar MST`,
+  retornar T = (V(T), E(T))`,
   },
   BELLMAN_FORD: {
     title: "Bellman-Ford",
     summary:
       "Encontra menores caminhos mesmo com pesos negativos e ainda detecta ciclo negativo alcançável da origem.",
     pseudocode: `BELLMAN_FORD(G, s)
-  para cada vertice v em G:
+  para cada vértice v em G:
     dist[v] <- infinito
+    pred[v] <- nulo
   dist[s] <- 0
 
-  repetir |V|-1 vezes:
-    para cada aresta (u, v, w):
-      se dist[u] + w < dist[v]:
-        dist[v] <- dist[u] + w
+  para i de 1 até |V|-1:
+    altera <- falso
+    para cada aresta (v, w, peso) em G:
+      se dist[v] != infinito e dist[w] > dist[v] + peso:
+        dist[w] <- dist[v] + peso
+        pred[w] <- v
+        altera <- verdadeiro
+    se altera = falso:
+      parar
 
-  para cada aresta (u, v, w):
-    se dist[u] + w < dist[v]:
-      reportar ciclo negativo`,
+  retornar dist, pred`,
   },
   FLOYD_WARSHALL: {
     title: "Floyd-Warshall",
     summary:
       "Resolve menor caminho entre todos os pares de vértices usando programação dinâmica sobre uma matriz de distâncias.",
     pseudocode: `FLOYD_WARSHALL(G)
-  inicializar matriz dist com pesos de G
-  para k de 1 ate n:
-    para i de 1 ate n:
-      para j de 1 ate n:
-        dist[i][j] <- min(dist[i][j], dist[i][k] + dist[k][j])
+  para i de 1 até n:
+    para j de 1 até n:
+      se i != j: dist[i][j] <- infinito
+    dist[i][i] <- 0
+
+  para cada aresta (i, j, d) em G:
+    dist[i][j] <- d
+
+  para k de 1 até n:
+    para i de 1 até n:
+      para j de 1 até n:
+        se dist[i][j] > dist[i][k] + dist[k][j]:
+          dist[i][j] <- dist[i][k] + dist[k][j]
 
   retornar dist`,
   },
@@ -144,6 +177,46 @@ DFS_VISIT(u)
     fluxo <- fluxo + gargalo
 
   retornar fluxo`,
+  },
+};
+
+const FLOW_VARIANTS: Record<string, FlowVariantInfo> = {
+  EDMONDS_KARP: {
+    title: "Edmonds-Karp",
+    summary:
+      "Versão do Ford-Fulkerson que escolhe sempre o caminho aumentante com menor número de arestas usando BFS na rede residual.",
+    pseudocode: `EDMONDS_KARP(G, s, t)
+  para toda aresta e em E(G): f(e) <- 0
+  construir a rede residual G'(f)
+
+  enquanto existir caminho aumentante P em G'(f):
+    P <- caminho com menor número de arestas
+    Δ <- minimo { ur(e) | e em P }
+    para cada aresta (v, w) em P:
+      se (v, w) for aresta direta:
+        f(v, w) <- f(v, w) + Δ
+      senão:
+        f(w, v) <- f(w, v) - Δ
+    atualizar a rede residual G'(f)
+
+  retornar f`,
+  },
+  DINIC: {
+    title: "Dinic",
+    summary:
+      "Constrói uma rede em níveis e encontra fluxos de bloqueio até não haver caminho aumentante na camada do sorvedouro.",
+    pseudocode: `DINIC(G, s, t)
+  para toda aresta e em E(G): f(e) <- 0
+  construir a rede residual G'(f)
+  construir a rede em níveis GL a partir de G'(f)
+
+  enquanto dist(t) < infinito:
+    fb <- fluxo de bloqueio em GL
+    atualizar o fluxo f usando fb
+    atualizar a rede residual G'(f)
+    construir a rede em níveis GL a partir de G'(f)
+
+  retornar f`,
   },
 };
 
@@ -185,8 +258,11 @@ export const ChallengeDebriefModal: React.FC<ChallengeDebriefModalProps> = ({
   const [activeAlgorithm, setActiveAlgorithm] = useState<string>(
     visibleAlgorithms[0] ?? "",
   );
+  const [activeFlowVariant, setActiveFlowVariant] = useState<string>("EDMONDS_KARP");
 
   const info = DEBRIEF_INFO[activeAlgorithm] ?? UNKNOWN_INFO;
+  const flowInfo = FLOW_VARIANTS[activeFlowVariant] ?? FLOW_VARIANTS.EDMONDS_KARP;
+  const isFlowDebrief = activeAlgorithm === "FORD_FULKERSON";
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 640);
@@ -335,23 +411,55 @@ export const ChallengeDebriefModal: React.FC<ChallengeDebriefModalProps> = ({
             </div>
           )}
 
-          <div className="bg-ponto-dark border border-ponto-muted/30 rounded-xl p-4">
-            <h3 className="text-white text-base font-bold mb-2">
-              {info.title}
-            </h3>
-            <p className="text-slate-300 text-sm leading-relaxed">
-              {info.summary}
-            </p>
-          </div>
+          {isFlowDebrief ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(FLOW_VARIANTS).map(([key, variant]) => (
+                  <button
+                    key={key}
+                    onClick={() => setActiveFlowVariant(key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                      activeFlowVariant === key
+                        ? "bg-ponto-accent text-ponto-darker border-ponto-accent"
+                        : "bg-ponto-dark text-slate-300 border-ponto-muted/40 hover:border-ponto-muted"
+                    }`}
+                  >
+                    {variant.title}
+                  </button>
+                ))}
+              </div>
 
-          <div className="bg-[#061a1f] border border-ponto-accent/30 rounded-xl p-4">
-            <p className="text-ponto-accent text-[10px] font-bold uppercase tracking-wider mb-2">
-              Pseudocódigo
-            </p>
-            <pre className="text-slate-200 text-xs sm:text-sm overflow-x-auto whitespace-pre">
-              {info.pseudocode}
-            </pre>
-          </div>
+              <div className="bg-ponto-dark border border-ponto-muted/30 rounded-xl p-4">
+                <h3 className="text-white text-base font-bold mb-2">{flowInfo.title}</h3>
+                <p className="text-slate-300 text-sm leading-relaxed">{flowInfo.summary}</p>
+              </div>
+
+              <div className="bg-[#061a1f] border border-ponto-accent/30 rounded-xl p-4">
+                <p className="text-ponto-accent text-[10px] font-bold uppercase tracking-wider mb-2">
+                  Pseudocódigo
+                </p>
+                <pre className="text-slate-200 text-xs sm:text-sm overflow-x-auto whitespace-pre">
+                  {flowInfo.pseudocode}
+                </pre>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="bg-ponto-dark border border-ponto-muted/30 rounded-xl p-4">
+                <h3 className="text-white text-base font-bold mb-2">{info.title}</h3>
+                <p className="text-slate-300 text-sm leading-relaxed">{info.summary}</p>
+              </div>
+
+              <div className="bg-[#061a1f] border border-ponto-accent/30 rounded-xl p-4">
+                <p className="text-ponto-accent text-[10px] font-bold uppercase tracking-wider mb-2">
+                  Pseudocódigo
+                </p>
+                <pre className="text-slate-200 text-xs sm:text-sm overflow-x-auto whitespace-pre">
+                  {info.pseudocode}
+                </pre>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="px-5 py-4 border-t border-ponto-muted/30 shrink-0">
