@@ -258,10 +258,12 @@ export const ChallengeDebriefModal: React.FC<ChallengeDebriefModalProps> = ({
   const [activeAlgorithm, setActiveAlgorithm] = useState<string>(
     visibleAlgorithms[0] ?? "",
   );
-  const [activeFlowVariant, setActiveFlowVariant] = useState<string>("EDMONDS_KARP");
+  const [activeFlowVariant, setActiveFlowVariant] =
+    useState<string>("EDMONDS_KARP");
 
   const info = DEBRIEF_INFO[activeAlgorithm] ?? UNKNOWN_INFO;
-  const flowInfo = FLOW_VARIANTS[activeFlowVariant] ?? FLOW_VARIANTS.EDMONDS_KARP;
+  const flowInfo =
+    FLOW_VARIANTS[activeFlowVariant] ?? FLOW_VARIANTS.EDMONDS_KARP;
   const isFlowDebrief = activeAlgorithm === "FORD_FULKERSON";
 
   useEffect(() => {
@@ -430,8 +432,12 @@ export const ChallengeDebriefModal: React.FC<ChallengeDebriefModalProps> = ({
               </div>
 
               <div className="bg-ponto-dark border border-ponto-muted/30 rounded-xl p-4">
-                <h3 className="text-white text-base font-bold mb-2">{flowInfo.title}</h3>
-                <p className="text-slate-300 text-sm leading-relaxed">{flowInfo.summary}</p>
+                <h3 className="text-white text-base font-bold mb-2">
+                  {flowInfo.title}
+                </h3>
+                <p className="text-slate-300 text-sm leading-relaxed">
+                  {flowInfo.summary}
+                </p>
               </div>
 
               <div className="bg-[#061a1f] border border-ponto-accent/30 rounded-xl p-4">
@@ -446,8 +452,12 @@ export const ChallengeDebriefModal: React.FC<ChallengeDebriefModalProps> = ({
           ) : (
             <>
               <div className="bg-ponto-dark border border-ponto-muted/30 rounded-xl p-4">
-                <h3 className="text-white text-base font-bold mb-2">{info.title}</h3>
-                <p className="text-slate-300 text-sm leading-relaxed">{info.summary}</p>
+                <h3 className="text-white text-base font-bold mb-2">
+                  {info.title}
+                </h3>
+                <p className="text-slate-300 text-sm leading-relaxed">
+                  {info.summary}
+                </p>
               </div>
 
               <div className="bg-[#061a1f] border border-ponto-accent/30 rounded-xl p-4">

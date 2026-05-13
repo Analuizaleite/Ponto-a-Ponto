@@ -419,6 +419,12 @@ function App() {
   const [showChallengeDebrief, setShowChallengeDebrief] = useState(false);
   const [debriefThemeTitle, setDebriefThemeTitle] = useState("");
   const [debriefAlgorithms, setDebriefAlgorithms] = useState<string[]>([]);
+  const [showEdgeWeightModal, setShowEdgeWeightModal] = useState(false);
+  const [edgeWeightInput, setEdgeWeightInput] = useState("1");
+  const [pendingEdge, setPendingEdge] = useState<{
+    sourceId: number;
+    targetId: number;
+  } | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 3000);
@@ -728,22 +734,32 @@ function App() {
         startNode = nodes.find(
           (n) => n.label === searchStart || n.id.toString() === searchStart,
         );
-        if (!startNode)
-          return alert(`Nó inicial ${isFF ? "(Fonte)" : ""} não encontrado.`);
+        if (!startNode) {
+          setCanvasWarningMessage(
+            `Nó inicial ${isFF ? "(Fonte)" : ""} não encontrado.`,
+          );
+          return;
+        }
 
         if (requiresTarget) {
           const searchTarget = targetNodeId.trim();
           targetNode = nodes.find(
             (n) => n.label === searchTarget || n.id.toString() === searchTarget,
           );
-          if (!targetNode)
-            return alert(
+          if (!targetNode) {
+            setCanvasWarningMessage(
               isFF
                 ? "Nó sumidouro (destino) não encontrado."
                 : "Nó final (destino) não encontrado.",
             );
-          if (isFF && startNode.id === targetNode.id)
-            return alert("A Fonte e o Sumidouro não podem ser o mesmo nó!");
+            return;
+          }
+          if (isFF && startNode.id === targetNode.id) {
+            setCanvasWarningMessage(
+              "A Fonte e o Sumidouro não podem ser o mesmo nó!",
+            );
+            return;
+          }
         }
       }
 
@@ -846,7 +862,9 @@ function App() {
       resetVisualState();
       stopAnimation();
     } catch (error) {
-      alert(`Erro ao processar grafo: ${error instanceof Error ? error.message : String(error)}`);
+      setCanvasWarningMessage(
+        `Erro ao processar grafo: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   };
 
@@ -855,6 +873,35 @@ function App() {
     setNodes([]);
     setEdges([]);
     setTransform({ x: 0, y: 0, k: 1 });
+  };
+
+  const confirmAddEdgeWithWeight = () => {
+    if (!pendingEdge) return;
+
+    const parsed = Number.parseInt(edgeWeightInput.trim(), 10);
+    if (Number.isNaN(parsed)) {
+      setCanvasWarningMessage("Informe um peso inteiro válido para a aresta.");
+      return;
+    }
+
+    setEdges((prev) => [
+      ...prev,
+      {
+        sourceId: pendingEdge.sourceId,
+        targetId: pendingEdge.targetId,
+        weight: parsed,
+      },
+    ]);
+
+    setPendingEdge(null);
+    setEdgeWeightInput("1");
+    setShowEdgeWeightModal(false);
+  };
+
+  const closeEdgeWeightModal = () => {
+    setPendingEdge(null);
+    setEdgeWeightInput("1");
+    setShowEdgeWeightModal(false);
   };
 
   const loadLevel = (themeId: string, levelIdx: number) => {
@@ -987,7 +1034,7 @@ function App() {
       let newLabel =
         customLabel !== "" ? customLabel : newInternalId.toString();
       if (customLabel !== "" && nodes.some((n) => n.label === customLabel))
-        return alert("Nó já existe.");
+        return setCanvasWarningMessage("Nó já existe.");
       setNodes([...nodes, { id: newInternalId, label: newLabel, x, y }]);
     }
   };
@@ -1030,7 +1077,7 @@ function App() {
         const residualCapacity = edge.weight - currentFlow;
 
         if (residualCapacity <= 0) {
-          alert(
+          setCanvasWarningMessage(
             "Atenção: Este caminho (cano) já está totalmente saturado! Procure outra via.",
           );
           setLives((l) => l - 1);
@@ -1077,7 +1124,7 @@ function App() {
           if (!stillHasPath) {
             setGameStatus("won");
           } else {
-            alert(
+            setCanvasWarningMessage(
               `Ação concluída! Você enviou +${bottleneck}L pela rede. Encontre o próximo caminho livre!`,
             );
           }
@@ -1124,11 +1171,9 @@ function App() {
                 edge.targetId === connectionSourceId),
           );
           if (!exists) {
-            const w = parseInt(prompt("Peso da aresta:", "1") || "1") || 1;
-            setEdges([
-              ...edges,
-              { sourceId: connectionSourceId, targetId: nodeId, weight: w },
-            ]);
+            setPendingEdge({ sourceId: connectionSourceId, targetId: nodeId });
+            setEdgeWeightInput("1");
+            setShowEdgeWeightModal(true);
           }
         }
         setConnectionSourceId(null);
@@ -1446,6 +1491,62 @@ function App() {
             setGamePhase("HUB");
           }}
         />
+      )}
+      {showEdgeWeightModal && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={closeEdgeWeightModal}
+        >
+          <div
+            className="bg-ponto-dark rounded-2xl overflow-hidden shadow-2xl w-full max-w-md mx-4 border border-ponto-muted"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-ponto-darker rounded-t-2xl px-6 py-4 border-b border-ponto-muted">
+              <p className="text-xs font-bold uppercase tracking-wider text-ponto-accent/80">
+                Configurar Aresta
+              </p>
+              <h3 className="mt-1 text-lg font-bold text-white">
+                Defina o peso da aresta
+              </h3>
+            </div>
+
+            <div className="px-6 py-5">
+              <label className="mb-2 block text-sm font-semibold text-slate-100">
+                Peso da aresta
+              </label>
+              <input
+                autoFocus
+                type="number"
+                step="1"
+                value={edgeWeightInput}
+                onChange={(e) => setEdgeWeightInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") confirmAddEdgeWithWeight();
+                  if (e.key === "Escape") closeEdgeWeightModal();
+                }}
+                className="w-full px-3 py-2 bg-ponto-dark border border-ponto-muted rounded-xl text-slate-100 focus:outline-none focus:border-ponto-accent focus:ring-1 focus:ring-ponto-accent"
+              />
+              <p className="mt-2 text-xs text-slate-400">
+                Use valores inteiros (ex.: 1, 5, 12).
+              </p>
+            </div>
+
+            <div className="mt-1 flex justify-end gap-3 px-6 pb-6">
+              <button
+                onClick={closeEdgeWeightModal}
+                className="px-4 py-2 text-slate-300 bg-ponto-dark hover:bg-ponto-muted/50 border border-ponto-muted rounded-xl transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmAddEdgeWithWeight}
+                className="px-4 py-2 bg-ponto-accent hover:bg-ponto-accent/90 text-ponto-darker font-medium rounded-xl transition"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
