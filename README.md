@@ -1,73 +1,100 @@
-# React + TypeScript + Vite
+# Ponto a Ponto
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Plataforma React + TypeScript + Vite para visualização de grafos e algoritmos.
 
-Currently, two official plugins are available:
+A versão disponível na web está hospedada em:
+https://ponto-a-ponto.tech/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Sobre o projeto
 
-## React Compiler
+O Ponto a Ponto é uma plataforma web educacional e interativa projetada para mitigar as dificuldades de abstração no ensino e na aprendizagem da Teoria dos Grafos. O sistema atua como um visualizador de algoritmos integrado a mecânicas lúdicas de gamificação, transformando conceitos lógico-matemáticos abstratos em fluxos visuais concretos e reativos.
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+ projeto foi desenvolvido como Trabalho de Conclusão de Curso TCC do curso de *Sistemas de Informação da Pontifícia Universidade Católica de Minas Gerais (PUC Minas).
 
-## Expanding the ESLint configuration
+### Funcionalidades principais
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+* **Módulo de Construção Livre:** Um ambiente de experimentação sem restrições onde o usuário pode desenhar vértices, conectar arestas (direcionadas e ponderadas), importar instâncias no formato DIMACS e simular o comportamento dos algoritmos passo a passo ou de forma automática.
+* **Central de Missões (Modo Desafio):** Cenários gamificados baseados em aplicações do mundo real. O motor de grafos valida as ações do estudante em tempo real, fornecendo feedbacks imediatos e gerenciando um sistema de tentativas (vidas).
+* **Algoritmos Suportados:** Busca em Largura, Busca em Profundidade, Dijkstra, Bellmand-Ford,Floyd-Warshall, Prim, Kruskal e Ford-Fulkerson.
+---
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Instruções para executar localmente
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Pré-requisitos
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Node.js 20.x ou superior
+- npm 10.x ou superior (ou `pnpm`/`yarn`, se preferir)
+
+### Instalação
+
+No diretório do projeto, execute:
+
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Executar em modo de desenvolvimento
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
 ```
+
+Depois de iniciar, abra o endereço exibido no terminal. Normalmente será:
+
+```text
+http://localhost:5173
+```
+
+### Build de produção
+
+
+```bash
+npm run build
+```
+
+
+Os arquivos finais ficarão na pasta `dist`.
+
+
+### Visualizar a build de produção localmente
+
+
+```bash
+npm run preview
+```
+
+### Scripts úteis
+
+
+
+- `npm run dev` — inicia o servidor de desenvolvimento com hot reload
+
+- `npm run build` — compila a aplicação para produção
+
+- `npm run preview` — roda um servidor local para testar a build de produção
+
+
+
+## Estrutura do projeto
+
+
+
+- `src/` — código fonte da aplicação
+
+- `public/` — ativos estáticos públicos
+
+- `vite.config.ts` — configuração do Vite
+
+- `tsconfig.json` — configuração do TypeScript
+
+- `tailwind.config.js` — configuração do Tailwind CSS
+
+
+
+## Observações
+
+
+
+- Certifique-se de usar a mesma versão do Node.js especificada acima para evitar problemas com dependências.
+
+- Caso use `yarn` ou `pnpm`, substitua os comandos `npm` pelos equivalentes. 
